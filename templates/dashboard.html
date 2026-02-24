@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GROOT Dashboard - Asteroid Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Comfortaa:wght@700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Montserrat', Arial, sans-serif;
+            background: linear-gradient(135deg, #0a1428 0%, #1a1a3e 50%, #0f1f3f 100%);
+            overflow: hidden;
+            color: #fff;
+        }
+        
+        #space {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        /* Header */
+        #header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(90deg, rgba(10,20,40,0.95) 0%, rgba(26,26,64,0.95) 100%);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            border-bottom: 2px solid rgba(0, 191, 255, 0.3);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #header-title {
+            font-family: 'Comfortaa', Arial, sans-serif;
+            font-size: 1.6em;
+            letter-spacing: 2px;
+            color: #00ff88;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #header-time {
+            font-size: 0.9em;
+            color: #ffeb3b;
+            letter-spacing: 1px;
+        }
+
+        .btn-search {
+            padding: 10px 20px;
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            border: 2px solid #00ff88;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        .btn-search:hover {
+            background: #00ff88;
+            color: #000;
+        }
+
+        .btn-logout {
+            padding: 10px 20px;
+            background: rgba(255, 82, 82, 0.2);
+            color: #ff5252;
+            border: 2px solid #ff5252;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        .btn-logout:hover {
+            background: #ff5252;
+            color: #fff;
+        }
+        
+        /* Main Content Grid */
+        .dashboard-container {
+            position: absolute;
+            top: 90px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 20px;
+            z-index: 5;
+        }
+
+        /* Left Panel - Info & Controls */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: calc(100vh - 150px);
+            overflow-y: auto;
+        }
+
+        .left-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .left-panel::-webkit-scrollbar-thumb {
+            background: #00bfff;
+            border-radius: 10px;
+        }
+
+        .panel-box {
+            background: linear-gradient(135deg, rgba(20, 25, 50, 0.95) 0%, rgba(30, 30, 80, 0.95) 100%);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 191, 255, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .box-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #00bfff;
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat-item {
+            background: rgba(0, 191, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 3px solid #00bfff;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #ffdd57;
+            font-family: 'Comfortaa', sans-serif;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 191, 255, 0.2);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(0, 191, 255, 0.1);
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: #aaa;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Fredoka', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            color: #00bfff;
+            border-bottom-color: #00bfff;
+            background: rgba(0, 191, 255, 0.2);
+        }
+
+        .tab-btn:hover {
+            color: #00ffff;
+        }
+
+        /* Alerts Section */
+        .alert-item {
+            background: linear-gradient(90deg, rgba(255, 82, 82, 0.15) 0%, transparent 100%);
+            border-left: 3px solid #ff5252;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .alert-item.safe {
+            border-left-color: #4caf50;
+            background: linear-gradient(90deg, rgba(76, 175, 80, 0.15) 0%, transparent 100%);
+        }
+
+        /* Right Panel - Main Content */
+        .right-panel {
+            background: linear-gradient(135deg, rgba(20, 25, 50, 0.95) 0%, rgba(30, 30, 80, 0.95) 100%);
+            border-radius: 15px;
+            border: 1px solid rgba(0, 191, 255, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            padding: 25px;
+            height: calc(100vh - 150px);
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .right-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .right-panel::-webkit-scrollbar-thumb {
+            background: #00bfff;
+            border-radius: 10px;
+        }
+
+        .right-panel h2 {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            font-family: 'Comfortaa', sans-serif;
+            color: #00ff88;
+        }
+
+        .asteroid-item {
+            background: linear-gradient(90deg, rgba(0, 191, 255, 0.1) 0%, rgba(0, 191, 255, 0.05) 100%);
+            margin: 15px 0;
+            padding: 16px;
+            border-radius: 10px;
+            border-left: 4px solid #00bfff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .asteroid-item:hover {
+            background: linear-gradient(90deg, rgba(0, 191, 255, 0.2) 0%, rgba(0, 191, 255, 0.1) 100%);
+            transform: translateX(8px);
+            box-shadow: 0 5px 20px rgba(0, 191, 255, 0.3);
+        }
+
+        .asteroid-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .asteroid-name {
+            font-family: 'Comfortaa', Arial, sans-serif;
+            font-size: 1.1em;
+            color: #00bfff;
+            font-weight: 600;
+        }
+
+        .hazard-badge {
+            background: #ff5252;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .safe-badge {
+            background: #4caf50;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .asteroid-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            font-size: 0.9em;
+            color: #ccc;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .detail-label {
+            color: #aaa;
+        }
+
+        .detail-value {
+            color: #ffdd57;
+            font-weight: 600;
+        }
+
+        .fav-btn {
+            background: rgba(255, 221, 87, 0.2);
+            border: 1px solid #ffdd57;
+            color: #ffdd57;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-family: 'Fredoka', sans-serif;
+            margin-top: 10px;
+        }
+
+        .fav-btn:hover {
+            background: #ffdd57;
+            color: #000;
+        }
+
+        .fav-btn.saved {
+            background: #ffdd57;
+            color: #000;
+        }
+
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 191, 255, 0.3);
+            border-top: 4px solid #00bfff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .planet-label {
+            position: absolute;
+            color: #fff;
+            font-family: 'Comfortaa', Arial, sans-serif;
+            font-size: 0.9em;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(0, 191, 255, 0.2));
+            padding: 6px 12px;
+            border-radius: 8px;
+            pointer-events: none;
+            z-index: 3;
+            border: 1px solid rgba(0, 191, 255, 0.4);
+            box-shadow: 0 4px 12px rgba(0, 191, 255, 0.2);
+        }
+
+        #footer {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            color: #888;
+            font-size: 0.8em;
+            z-index: 5;
+        }
+
+        .ai-insights {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 191, 255, 0.1) 100%);
+            border-left: 3px solid #00ff88;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #ddd;
+            line-height: 1.6;
+        }
+
+        .ai-title {
+            font-weight: 700;
+            color: #00ff88;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            animation: glow 2s infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 5px rgba(0, 255, 136, 0.3); }
+            50% { text-shadow: 0 0 15px rgba(0, 255, 136, 0.8); }
+        }
+
+        /* Report Modal */
+        .report-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .report-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .report-modal-content {
+            background: linear-gradient(135deg, rgba(10, 20, 40, 0.98) 0%, rgba(26, 26, 64, 0.98) 100%);
+            border: 2px solid rgba(0, 191, 255, 0.4);
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .report-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 82, 82, 0.2);
+            color: #ff5252;
+            border: 2px solid #ff5252;
+            font-size: 1.5em;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+
+        .report-close-btn:hover {
+            background: #ff5252;
+            color: #fff;
+        }
+
+        .report-content {
+            color: #ddd;
+            line-height: 1.8;
+            font-size: 0.95em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Montserrat', Arial, sans-serif;
+        }
+
+        .report-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            min-height: 300px;
+        }
+
+        .report-spinner {
+            border: 4px solid rgba(0, 191, 255, 0.3);
+            border-top: 4px solid #00bfff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        .report-error {
+            background: rgba(255, 82, 82, 0.2);
+            border: 2px solid #ff5252;
+            color: #ff5252;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+
+            .left-panel {
+                height: auto;
+            }
+
+            .report-modal-content {
+                padding: 30px;
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="space"></canvas>
+    
+    <div id="header">
+        <div class="header-left">
+            <div id="header-title">🌿 GROOT</div>
+        </div>
+        <div class="user-info">
+            <div id="header-time"></div>
+            <button class="btn-search" onclick="window.location.href='/search'">🔍 Search</button>
+            <button class="btn-search" style="background:rgba(180,100,255,0.2);color:#b44fff;border-color:#b44fff;" onclick="window.location.href='/visualizer'">🌌 3D View</button>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <!-- Stats Box -->
+            <div class="panel-box">
+                <div class="box-title">📊 Today's Stats</div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">Total</div>
+                        <div class="stat-value" id="total-neos">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Hazardous</div>
+                        <div class="stat-value" id="hazard-count">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="panel-box">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('alerts')">⚠️ Alerts</button>
+                    <button class="tab-btn" onclick="switchTab('favorites')">⭐ Favorites</button>
+                </div>
+
+                <!-- Alerts Tab -->
+                <div id="alerts-tab">
+                    <div id="alerts" style="max-height: 200px; overflow-y: auto;"></div>
+                </div>
+
+                <!-- Favorites Tab -->
+                <div id="favorites-tab" style="display: none;">
+                    <div id="favorites" style="max-height: 200px; overflow-y: auto;">
+                        <p style="color: #aaa; text-align: center;">No favorites yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Info -->
+            <div class="panel-box">
+                <div class="box-title">🎯 Quick Tips</div>
+                <ul style="list-style: none; color: #ccc; font-size: 0.9em; line-height: 1.8;">
+                    <li>✓ Add asteroids to favorites</li>
+                    <li>✓ Watch the 3D space viz</li>
+                    <li>✓ Check hazard status</li>
+                    <li>✓ Monitor distances</li>
+                    <li style="color:#b44fff">🌌 <b>Try 3D Visualizer!</b></li>
+                </ul>
+            </div>
+
+            <!-- AI Insights -->
+            <div class="panel-box">
+                <div class="ai-title">✨ AI Insights</div>
+                <div id="aiInsights" style="font-size: 0.9em; color: #ddd; line-height: 1.6; min-height: 100px;">
+                    Loading AI insights...
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <h2>🛰️ Live Asteroid Feed</h2>
+            <div id="asteroid-list"></div>
+        </div>
+    </div>
+
+    <div id="footer">Updated: <span id="footer-time">--:--:--</span></div>
+
+    <div class="report-modal" id="reportModal">
+        <div class="report-modal-content" id="reportModalContent">
+            <button class="report-close-btn" onclick="closeReportModal()">✕</button>
+            <div id="reportModalBody"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Real-time clock
+        function updateTime() {
+            const now = new Date();
+            const time = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('header-time').innerText = time;
+            document.getElementById('footer-time').innerText = time;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Logout
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('[id$="-tab"]').forEach(tab => tab.style.display = 'none');
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + '-tab').style.display = 'block';
+        }
+
+        // Three.js Setup
+        const canvas = document.getElementById('space');
+        const renderer = new THREE.WebGLRenderer({canvas, alpha: true, antialias: true});
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        camera.position.z = 50;
+
+        function createPlanet(color, x, y, size, label) {
+            const geometry = new THREE.SphereGeometry(size, 40, 40);
+            const material = new THREE.MeshPhongMaterial({
+                color, 
+                shininess: 100,
+                emissive: color,
+                emissiveIntensity: 0.2
+            });
+            const planet = new THREE.Mesh(geometry, material);
+            planet.position.set(x, y, 0);
+            scene.add(planet);
+            
+            const div = document.createElement('div');
+            div.className = 'planet-label';
+            div.innerText = label;
+            document.body.appendChild(div);
+            planet.labelDiv = div;
+            planet.size = size;
+            planet.labelPos = {x, y};
+            return planet;
+        }
+
+        const planets = [
+            createPlanet(0x00ff88, -30, 15, 7, '🌍 Earth'),
+            createPlanet(0xffdd57, 30, -15, 9, '🪐 Saturn'),
+            createPlanet(0x8e44ad, -10, 28, 5, '🔩 Neptune'),
+        ];
+
+        let asteroids = [];
+        function createAsteroid(x, y, size, hazard) {
+            const geometry = new THREE.SphereGeometry(size, 20, 20);
+            const material = new THREE.MeshPhongMaterial({
+                color: hazard ? 0xff5252 : 0xaaaaaa, 
+                shininess: 50,
+                emissive: hazard ? 0xff5252 : 0x555555,
+                emissiveIntensity: 0.3
+            });
+            const asteroid = new THREE.Mesh(geometry, material);
+            asteroid.position.set(x, y, 0);
+            scene.add(asteroid);
+            asteroids.push(asteroid);
+        }
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 1.2);
+        pointLight.position.set(10, 10, 60);
+        scene.add(pointLight);
+        const pointLight2 = new THREE.PointLight(0x00ff88, 0.8);
+        pointLight2.position.set(-40, -20, 40);
+        scene.add(pointLight2);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            asteroids.forEach((a, i) => {
+                a.position.x += Math.sin(Date.now()/900 + i)*0.04;
+                a.position.y += Math.cos(Date.now()/1100 + i)*0.04;
+                a.rotation.x += 0.01;
+                a.rotation.y += 0.01;
+            });
+            
+            planets.forEach((p) => {
+                p.rotation.y += 0.008;
+                p.rotation.x += 0.003;
+                
+                const vector = new THREE.Vector3(p.labelPos.x, p.labelPos.y, 0);
+                vector.project(camera);
+                const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+                p.labelDiv.style.left = `${x - 50}px`;
+                p.labelDiv.style.top = `${y - p.size*10}px`;
+            });
+            
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        let favorites = [];
+        let searchResults = [];
+
+        async function fetchFavorites() {
+            try {
+                const res = await fetch('/api/favorites');
+                const data = await res.json();
+                favorites = data.favorites || [];
+                updateFavoritesList();
+            } catch (error) {
+                console.log('Error fetching favorites:', error);
+            }
+        }
+
+        function updateFavoritesList() {
+            const favDiv = document.getElementById('favorites');
+            if (favorites.length === 0) {
+                favDiv.innerHTML = '<p style="color: #aaa; text-align: center;">No favorites yet</p>';
+            } else {
+                favDiv.innerHTML = favorites.map(fav => 
+                    `<div class="alert-item" style="margin: 8px 0; padding: 8px; font-size: 0.9em;">⭐ ${fav}</div>`
+                ).join('');
+            }
+        }
+
+        async function toggleFavorite(name, btn) {
+            if (favorites.includes(name)) {
+                favorites = favorites.filter(f => f !== name);
+                await fetch('/api/favorites', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                btn.classList.remove('saved');
+            } else {
+                favorites.push(name);
+                await fetch('/api/favorites', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                btn.classList.add('saved');
+            }
+            updateFavoritesList();
+        }
+
+        async function fetchAsteroids() {
+            try {
+                document.getElementById('asteroid-list').innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p style="margin-top: 15px; color: #aaa;">Loading asteroid data...</p></div>';
+                const res = await fetch('/api/asteroids?date=2026-02-22', { timeout: 20000 });
+                
+                if (!res.ok) {
+                    const errorData = await res.json().catch(() => ({}));
+                    throw new Error(errorData.error || `HTTP ${res.status}`);
+                }
+                
+                const data = await res.json();
+                
+                if (!data.near_earth_objects) {
+                    throw new Error('Invalid data format from API');
+                }
+                
+                if (data.near_earth_objects) {
+                    const neos = data.near_earth_objects['2026-02-22'] || [];
+                    const hazardousCount = neos.filter(neo => neo.is_potentially_hazardous_asteroid).length;
+                    
+                    // Store for AI insights
+                    searchResults = neos;
+                    
+                    document.getElementById('total-neos').innerText = neos.length;
+                    document.getElementById('hazard-count').innerText = hazardousCount;
+                    
+                    // Alerts
+                    if (hazardousCount > 0) {
+                        document.getElementById('alerts').innerHTML = 
+                            `<div class="alert-item">⚠️ ${hazardousCount} HAZARDOUS OBJECT(S)</div>` + 
+                            neos.filter(n => n.is_potentially_hazardous_asteroid).slice(0, 3).map(neo =>
+                                `<div class="alert-item">${neo.name}</div>`
+                            ).join('');
+                    } else {
+                        document.getElementById('alerts').innerHTML = '<div class="alert-item safe">✓ All Clear!</div>';
+                    }
+                    
+                    // Asteroids list
+                    document.getElementById('asteroid-list').innerHTML = neos.map(neo => {
+                        const diameter = neo.estimated_diameter.meters.estimated_diameter_max.toFixed(1);
+                        const hazardous = neo.is_potentially_hazardous_asteroid;
+                        const missDistance = neo.close_approach_data && neo.close_approach_data[0] 
+                            ? (parseFloat(neo.close_approach_data[0].miss_distance.kilometers) / 1000).toFixed(1)
+                            : 'N/A';
+                        const isFavorite = favorites.includes(neo.name);
+                        
+                        return `
+                            <div class="asteroid-item" onclick="window.location.href='/search?query=${encodeURIComponent(neo.name)}'">
+                                <div class="asteroid-header">
+                                    <span class="asteroid-name">${neo.name}</span>
+                                    <span class="${hazardous ? 'hazard-badge' : 'safe-badge'}">
+                                        ${hazardous ? '⚠️ HAZARDOUS' : '✓ SAFE'}
+                                    </span>
+                                </div>
+                                <div class="asteroid-details">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Size:</span>
+                                        <span class="detail-value">${diameter}m</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Distance:</span>
+                                        <span class="detail-value">${missDistance}M km</span>
+                                    </div>
+                                </div>
+                                <button class="fav-btn ${isFavorite ? 'saved' : ''}" onclick="event.stopPropagation(); toggleFavorite('${neo.name}', this)">
+                                    ${isFavorite ? '⭐ Saved' : '☆ Save'}
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    // Create visual asteroids
+                    asteroids.forEach(a => scene.remove(a));
+                    asteroids = [];
+                    neos.slice(0, Math.min(12, neos.length)).forEach((neo, i) => {
+                        createAsteroid(-12 + (i % 4)*8, -8 + Math.floor(i/4)*8, 0.8 + Math.random()*1.5, neo.is_potentially_hazardous_asteroid);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching asteroids:', error);
+                document.getElementById('asteroid-list').innerHTML = `
+                    <div class="alert-item" style="background: rgba(255, 82, 82, 0.2); border-left-color: #ff5252; margin: 20px 0; padding: 20px; text-align: center;">
+                        <div style="font-size: 1.2em; font-weight: 700; color: #ff5252; margin-bottom: 10px;">⚠️ Error Loading Data</div>
+                        <div style="color: #ccc; margin-bottom: 15px;">${error.message}</div>
+                        <button onclick="fetchAsteroids()" style="background: #00bfff; color: #000; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: 'Fredoka', sans-serif;">
+                            🔄 Retry
+                        </button>
+                    </div>
+                `;
+            }
+
+            // Fetch AI insights
+            fetchAIInsights();
+        }
+
+        async function fetchAIInsights() {
+            try {
+                const allNeos = searchResults || [];
+                if (allNeos.length > 0) {
+                    const response = await fetch('/api/dashboard-insights', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ asteroids: allNeos })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        document.getElementById('aiInsights').innerHTML = data.insights.split('\n').map(line => 
+                            `<p style="margin: 8px 0;">${line}</p>`
+                        ).join('');
+                    }
+                }
+            } catch (error) {
+                console.log('AI Insights error:', error);
+            }
+        }
+        
+        fetchFavorites();
+        fetchAsteroids();
+        setInterval(fetchAsteroids, 300000);
+    </script>
+</body>
+</html>

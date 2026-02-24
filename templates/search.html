@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GROOT — Asteroid Search</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--cyan:#00e5ff;--green:#00ff88;--red:#ff3d57;--yellow:#ffdd57;--purple:#b44fff;--bg:#02050f;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:#fff;min-height:100vh;padding-bottom:40px;}
+
+    /* ── TOP BAR ── */
+    #topbar{
+      background:rgba(4,8,20,.97);border-bottom:1px solid rgba(0,229,255,.15);
+      padding:14px 28px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100;
+    }
+    .logo{font-family:'Orbitron',sans-serif;font-size:1.1em;color:var(--green);letter-spacing:4px;}
+    .logo span{color:var(--cyan);}
+    #topbar-title{flex:1;font-size:.8em;color:#334455;letter-spacing:2px;}
+    .tbtn{padding:7px 18px;border-radius:18px;border:1px solid;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.82em;letter-spacing:1px;transition:all .2s;}
+    .tbtn-back{border-color:#3355aa;color:#6688bb;background:rgba(51,85,170,.1);}
+    .tbtn-back:hover{background:rgba(51,85,170,.4);color:#fff;}
+    .tbtn-3d{border-color:var(--purple);color:var(--purple);background:rgba(180,79,255,.1);}
+    .tbtn-3d:hover{background:var(--purple);color:#fff;}
+
+    /* ── MAIN LAYOUT ── */
+    .wrapper{max-width:1200px;margin:0 auto;padding:28px 22px;}
+
+    /* ── SEARCH BOX ── */
+    .search-card{
+      background:rgba(8,14,34,.9);border:1px solid rgba(0,229,255,.18);
+      border-radius:18px;padding:28px 30px;margin-bottom:26px;
+    }
+    .search-card h1{font-family:'Orbitron',sans-serif;font-size:1.5em;color:var(--green);letter-spacing:3px;margin-bottom:6px;}
+    .search-card p{color:#445566;font-size:.9em;margin-bottom:20px;letter-spacing:1px;}
+    .search-row{display:flex;gap:10px;margin-bottom:12px;}
+    #qInput{
+      flex:1;padding:13px 18px;border:2px solid rgba(0,229,255,.25);border-radius:10px;
+      background:rgba(0,229,255,.07);color:#fff;font-size:1em;font-family:'Rajdhani',sans-serif;
+      outline:none;transition:all .2s;letter-spacing:.5px;
+    }
+    #qInput:focus{border-color:var(--cyan);background:rgba(0,229,255,.12);box-shadow:0 0 18px rgba(0,229,255,.15);}
+    #qInput::placeholder{color:#334455;}
+    .sbtn{
+      padding:13px 28px;border-radius:10px;border:none;cursor:pointer;
+      background:linear-gradient(90deg,var(--green),var(--cyan));
+      color:#000;font-weight:800;font-family:'Rajdhani',sans-serif;font-size:1em;
+      transition:all .2s;letter-spacing:1px;
+    }
+    .sbtn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,255,136,.35);}
+    .sbtn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+    /* Quick-access pills */
+    .pills{display:flex;flex-wrap:wrap;gap:7px;}
+    .pill{
+      padding:5px 14px;border-radius:20px;border:1px solid rgba(0,229,255,.2);
+      color:#5588aa;font-size:.78em;cursor:pointer;transition:all .18s;letter-spacing:.5px;
+    }
+    .pill:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,.08);}
+    .pill.haz{border-color:rgba(255,61,87,.3);color:#aa5566;}
+    .pill.haz:hover{border-color:var(--red);color:var(--red);background:rgba(255,61,87,.08);}
+
+    /* ── LOCAL KB BROWSER ── */
+    #kbSection{margin-bottom:26px;}
+    .section-title{
+      font-family:'Orbitron',sans-serif;font-size:.72em;letter-spacing:2px;
+      color:#334455;margin-bottom:12px;display:flex;align-items:center;gap:10px;
+    }
+    .section-title span{background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.15);color:var(--cyan);padding:2px 10px;border-radius:10px;font-size:.95em;}
+    .kb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;}
+    .kb-chip{
+      padding:8px 12px;border-radius:9px;border:1px solid rgba(0,229,255,.12);
+      background:rgba(0,229,255,.04);cursor:pointer;transition:all .18s;
+      display:flex;align-items:center;gap:8px;
+    }
+    .kb-chip:hover{border-color:rgba(0,229,255,.4);background:rgba(0,229,255,.1);transform:translateX(3px);}
+    .kb-chip.haz{border-color:rgba(255,61,87,.2);background:rgba(255,61,87,.04);}
+    .kb-chip.haz:hover{border-color:var(--red);background:rgba(255,61,87,.12);}
+    .kc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .kc-dot.d{background:var(--red);box-shadow:0 0 5px var(--red);}
+    .kc-dot.s{background:var(--green);}
+    .kc-name{font-size:.8em;color:#99aabb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .kb-chip.haz .kc-name{color:#bb7788;}
+    .kc-size{font-size:.7em;color:#334455;margin-left:auto;flex-shrink:0;}
+
+    /* ── RESULTS ── */
+    #results{display:none;}
+    .results-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+    @media(max-width:860px){.results-grid{grid-template-columns:1fr;}}
+
+    /* Source badge */
+    .source-badge{
+      display:inline-flex;align-items:center;gap:6px;padding:5px 14px;
+      border-radius:20px;font-size:.75em;font-weight:700;letter-spacing:1px;margin-bottom:14px;
+    }
+    .sb-local{background:rgba(0,255,136,.1);border:1px solid var(--green);color:var(--green);}
+    .sb-nasa {background:rgba(0,229,255,.1);border:1px solid var(--cyan); color:var(--cyan);}
+    .sb-dot  {width:7px;height:7px;border-radius:50%;}
+    .sb-local .sb-dot{background:var(--green);animation:pulse .8s infinite;}
+    .sb-nasa  .sb-dot{background:var(--cyan);}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+    /* Match card */
+    .match-list{display:flex;flex-direction:column;gap:8px;}
+    .match-card{
+      padding:13px 16px;border-radius:10px;border:1px solid rgba(0,229,255,.15);
+      background:rgba(0,229,255,.05);cursor:pointer;transition:all .2s;
+    }
+    .match-card:hover{border-color:var(--cyan);background:rgba(0,229,255,.12);transform:translateX(4px);}
+    .match-card.sel{border-color:var(--green);background:rgba(0,255,136,.08);}
+    .match-card.haz{border-color:rgba(255,61,87,.25);background:rgba(255,61,87,.05);}
+    .match-card.haz:hover{border-color:var(--red);}
+    .match-card.haz.sel{border-color:var(--red);background:rgba(255,61,87,.1);}
+    .mc-name{font-family:'Orbitron',sans-serif;font-size:.8em;color:var(--cyan);margin-bottom:5px;}
+    .match-card.haz .mc-name{color:var(--red);}
+    .mc-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:.76em;color:#556677;}
+    .mc-meta span{color:#8899aa;}
+
+    /* Report panel */
+    .report-card{
+      background:rgba(8,14,34,.95);border:1px solid rgba(0,229,255,.2);
+      border-radius:14px;overflow:hidden;
+    }
+    .report-header{
+      padding:18px 22px;border-bottom:1px solid rgba(0,229,255,.12);
+      background:rgba(0,229,255,.04);
+    }
+    .rh-name{font-family:'Orbitron',sans-serif;font-size:.95em;color:var(--cyan);margin-bottom:6px;}
+    .rh-badges{display:flex;gap:8px;flex-wrap:wrap;}
+    .rbadge{padding:3px 12px;border-radius:14px;font-size:.72em;font-weight:700;letter-spacing:.8px;}
+    .rbadge.haz{background:rgba(255,61,87,.18);border:1px solid var(--red);color:var(--red);}
+    .rbadge.safe{background:rgba(0,255,136,.12);border:1px solid var(--green);color:var(--green);}
+    .rbadge.kb{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);color:#00cc66;}
+    .rbadge.live{background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.3);color:var(--cyan);}
+    .rbadge.model{background:rgba(180,79,255,.08);border:1px solid rgba(180,79,255,.3);color:var(--purple);}
+
+    .report-body{padding:20px 22px;}
+
+    /* Extra local-KB metadata section */
+    .extra-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;}
+    .extra-item{
+      padding:9px 12px;border-radius:8px;
+      background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.08);
+      font-size:.8em;line-height:1.5;color:#8899aa;
+    }
+    .extra-item strong{color:#aabbcc;display:block;margin-bottom:2px;}
+
+    /* Pre-formatted report output */
+    .report-pre{
+      background:rgba(2,4,12,.6);border:1px solid rgba(0,229,255,.1);
+      border-radius:10px;padding:18px;
+      font-family:'Rajdhani',sans-serif;font-size:.86em;line-height:1.75;
+      color:#ccd8e0;white-space:pre-wrap;word-break:break-word;
+      max-height:520px;overflow-y:auto;
+    }
+    .report-pre::-webkit-scrollbar{width:4px;}
+    .report-pre::-webkit-scrollbar-thumb{background:rgba(0,229,255,.25);border-radius:4px;}
+
+    /* Fun fact callout */
+    .funfact{
+      margin-top:14px;padding:14px 16px;border-radius:10px;
+      background:linear-gradient(135deg,rgba(0,255,136,.06),rgba(0,229,255,.04));
+      border-left:3px solid var(--green);
+    }
+    .ff-label{font-size:.7em;letter-spacing:2px;color:var(--green);font-family:'Orbitron',sans-serif;margin-bottom:5px;}
+    .ff-text{font-size:.88em;color:#aabbcc;line-height:1.6;}
+
+    /* Loading */
+    .load-wrap{display:flex;align-items:center;gap:12px;padding:18px;color:#445566;font-size:.9em;}
+    .spin{width:18px;height:18px;border-radius:50%;border:2px solid rgba(0,229,255,.2);border-top:2px solid var(--cyan);animation:sp .7s linear infinite;flex-shrink:0;}
+    @keyframes sp{to{transform:rotate(360deg)}}
+
+    /* Error */
+    .err{padding:16px;border-radius:10px;background:rgba(255,61,87,.1);border:1px solid rgba(255,61,87,.3);color:var(--red);font-size:.88em;}
+  </style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">🌿 <span>GROOT</span></div>
+  <div id="topbar-title">ASTEROID SEARCH · LOCAL KNOWLEDGE BASE</div>
+  <button class="tbtn tbtn-3d" onclick="location.href='/visualizer'">🌌 3D View</button>
+  <button class="tbtn tbtn-back" onclick="location.href='/dashboard'">← Dashboard</button>
+</div>
+
+<div class="wrapper">
+
+  <!-- Search Box -->
+  <div class="search-card">
+    <h1>🔭 ASTEROID SEARCH</h1>
+    <p>SEARCH LOCAL KNOWLEDGE BASE FIRST — THEN LIVE NASA DATA IF NOT FOUND</p>
+    <div class="search-row">
+      <input type="text" id="qInput" placeholder="Type asteroid name… e.g. Apophis, Bennu, Ryugu" autocomplete="off">
+      <button class="sbtn" id="searchBtn" onclick="doSearch()">🔍 SEARCH</button>
+    </div>
+    <div class="pills" id="pills"><!-- filled by JS --></div>
+  </div>
+
+  <!-- Local KB Browser -->
+  <div id="kbSection">
+    <div class="section-title">LOCAL KNOWLEDGE BASE <span id="kbCount">…</span></div>
+    <div class="kb-grid" id="kbGrid">
+      <div style="color:#334455;font-size:.85em;padding:10px;">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <div class="section-title" id="resultTitle">RESULTS</div>
+    <div class="results-grid">
+      <!-- Left: match list -->
+      <div>
+        <div id="sourceBadge"></div>
+        <div class="match-list" id="matchList"></div>
+      </div>
+      <!-- Right: report -->
+      <div class="report-card" id="reportCard">
+        <div style="padding:40px;text-align:center;color:#334455;">
+          <div style="font-size:2em;margin-bottom:10px;">🪨</div>
+          <div style="font-family:'Orbitron',sans-serif;font-size:.75em;letter-spacing:2px;">SELECT AN ASTEROID</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ───────────────────────────────────────────────────
+let currentResults = [];
+let currentSource  = '';
+let selectedIdx    = -1;
+
+// ── Quick search pills (famous names) ─────────────────────
+const FAMOUS = [
+  {n:'Apophis',haz:true},{n:'Bennu',haz:true},{n:'Ryugu',haz:false},
+  {n:'Didymos',haz:true},{n:'Eros',haz:false},{n:'Itokawa',haz:false},
+  {n:'Phaethon',haz:true},{n:'Toutatis',haz:true},{n:'Florence',haz:true},
+  {n:'Psyche',haz:false},{n:'Ceres',haz:false},{n:'Vesta',haz:false},
+  {n:'Icarus',haz:true},{n:'Apollo',haz:true},{n:'Hermes',haz:true},
+  {n:'1998 OR2',haz:true},{n:'1994 PC1',haz:true},{n:'2023 DW',haz:true},
+];
+document.getElementById('pills').innerHTML = FAMOUS.map(f=>
+  `<span class="pill${f.haz?' haz':''}" onclick="quickSearch('${f.n}')">${f.n}</span>`
+).join('');
+
+// ── Load KB grid ────────────────────────────────────────────
+async function loadKB() {
+  try {
+    const res  = await fetch('/api/asteroid-kb');
+    const data = await res.json();
+    if(!data.success) throw new Error(data.error);
+    document.getElementById('kbCount').textContent = data.count + ' asteroids';
+    document.getElementById('kbGrid').innerHTML = data.asteroids.map(a=>`
+      <div class="kb-chip${a.hazardous?' haz':''}" onclick="quickSearch('${a.name.replace(/'/g,"\\'")}')">
+        <div class="kc-dot ${a.hazardous?'d':'s'}"></div>
+        <div class="kc-name" title="${a.name}">${a.name}</div>
+        <div class="kc-size">${a.diameter_km?a.diameter_km.toFixed(1)+' km':'—'}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('kbGrid').innerHTML = `<div style="color:#445566;font-size:.82em;">Could not load KB: ${e.message}</div>`;
+  }
+}
+loadKB();
+
+// ── Search ──────────────────────────────────────────────────
+function quickSearch(name) {
+  document.getElementById('qInput').value = name;
+  doSearch();
+}
+
+async function doSearch() {
+  const q = document.getElementById('qInput').value.trim();
+  if(!q) return;
+
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Searching…';
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('resultTitle').textContent = `RESULTS FOR "${q.toUpperCase()}"`;
+  document.getElementById('matchList').innerHTML = '<div class="load-wrap"><div class="spin"></div>Searching local KB then NASA…</div>';
+  document.getElementById('reportCard').innerHTML = '<div style="padding:40px;text-align:center;color:#334455;"><div class="spin" style="margin:0 auto 10px;width:28px;height:28px;border-width:3px;"></div><div style="font-size:.8em;">Fetching data…</div></div>';
+  document.getElementById('sourceBadge').innerHTML = '';
+
+  try {
+    const res  = await fetch('/api/search-asteroid?name='+encodeURIComponent(q));
+    const data = await res.json();
+    if(!data.success) throw new Error(data.error||'Search failed');
+
+    currentResults = data.results || [];
+    currentSource  = data.source  || 'unknown';
+    selectedIdx    = -1;
+
+    // Source badge
+    const isLocal = currentSource === 'local_db';
+    document.getElementById('sourceBadge').innerHTML = `
+      <div class="source-badge ${isLocal?'sb-local':'sb-nasa'}">
+        <div class="sb-dot"></div>
+        ${isLocal ? '🗄 LOCAL KNOWLEDGE BASE' : '🛸 NASA LIVE DATA'}
+        ${isLocal ? '— Rich local data + local model report' : '— Fetched from NASA NEO API'}
+      </div>`;
+
+    if(!currentResults.length) {
+      document.getElementById('matchList').innerHTML = '<div class="err">No asteroid found matching "'+q+'". Try a different name.</div>';
+      document.getElementById('reportCard').innerHTML = '<div style="padding:30px;text-align:center;color:#334455;">No results.</div>';
+      btn.disabled=false; btn.textContent='🔍 SEARCH';
+      return;
+    }
+
+    // Build match list
+    document.getElementById('matchList').innerHTML = currentResults.map((neo,i)=>{
+      const haz = neo.is_potentially_hazardous_asteroid;
+      const dmax= (neo.estimated_diameter?.kilometers?.estimated_diameter_max||0).toFixed(3);
+      const ca  = neo.close_approach_data && neo.close_approach_data[0];
+      const dist= ca ? parseFloat(ca.miss_distance?.lunar||0).toFixed(1)+' LD' : '—';
+      return `<div class="match-card${haz?' haz':''}" id="mc-${i}" onclick="selectResult(${i})">
+        <div class="mc-name">${neo.name}</div>
+        <div class="mc-meta">
+          <div>Size: <span>${dmax} km</span></div>
+          <div>Dist: <span>${dist}</span></div>
+          <div>${haz?'<span style="color:var(--red)">⚠ HAZARDOUS</span>':'<span style="color:var(--green)">✓ SAFE</span>'}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Auto-select first
+    selectResult(0);
+
+  } catch(e) {
+    document.getElementById('matchList').innerHTML = `<div class="err">❌ ${e.message}</div>`;
+    document.getElementById('reportCard').innerHTML = '<div style="padding:30px;text-align:center;color:var(--red);">Error fetching data.</div>';
+  }
+
+  btn.disabled=false; btn.textContent='🔍 SEARCH';
+}
+
+// ── Select + generate report ────────────────────────────────
+async function selectResult(idx) {
+  if(selectedIdx === idx) return;
+  selectedIdx = idx;
+
+  // Highlight card
+  document.querySelectorAll('.match-card').forEach(c=>c.classList.remove('sel'));
+  const card = document.getElementById('mc-'+idx);
+  if(card) card.classList.add('sel');
+
+  const neo = currentResults[idx];
+  if(!neo) return;
+
+  document.getElementById('reportCard').innerHTML =
+    '<div class="load-wrap"><div class="spin"></div>Running local model — generating report…</div>';
+
+  try {
+    const res  = await fetch('/api/asteroid-info', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name: neo.name, data: neo})
+    });
+    const data = await res.json();
+    if(!data.success) throw new Error(data.error||'Report failed');
+
+    const haz    = neo.is_potentially_hazardous_asteroid;
+    const local  = data.source === 'local_kb';
+    const extras = data.extra || [];
+    const loc    = neo._local || {};
+
+    // Build extra grid from _local metadata
+    let extraHtml = '';
+    if(extras.length) {
+      const pairs = extras.map(e=>{
+        const [label, ...rest] = e.split(': ');
+        const cleanLabel = label.replace(/^[^\w]*/,'').trim();
+        const val = rest.join(': ');
+        return `<div class="extra-item"><strong>${cleanLabel}</strong>${val}</div>`;
+      });
+      extraHtml = `<div class="extra-grid">${pairs.join('')}</div>`;
+    }
+
+    // Fun fact section
+    let funFactHtml = '';
+    if(loc.fun_fact) {
+      funFactHtml = `<div class="funfact"><div class="ff-label">💡 FUN FACT</div><div class="ff-text">${loc.fun_fact}</div></div>`;
+    }
+
+    document.getElementById('reportCard').innerHTML = `
+      <div class="report-header">
+        <div class="rh-name">${neo.name}</div>
+        <div class="rh-badges">
+          <span class="rbadge ${haz?'haz':'safe'}">${haz?'⚠ HAZARDOUS':'✓ SAFE'}</span>
+          <span class="rbadge ${local?'kb':'live'}">${local?'🗄 LOCAL KB':'🛸 NASA LIVE'}</span>
+          <span class="rbadge model">🤖 LOCAL MODEL</span>
+        </div>
+      </div>
+      <div class="report-body">
+        ${extraHtml}
+        <div class="report-pre">${escHtml(data.info)}</div>
+        ${funFactHtml}
+      </div>`;
+
+  } catch(e) {
+    document.getElementById('reportCard').innerHTML = `<div style="padding:22px;"><div class="err">❌ Report error: ${e.message}</div></div>`;
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Keyboard support ────────────────────────────────────────
+document.getElementById('qInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') doSearch();
+});
+
+// ── Auto-search from URL query param ───────────────────────
+const q = new URLSearchParams(location.search).get('query');
+if(q){ document.getElementById('qInput').value=q; setTimeout(doSearch, 400); }
+</script>
+</body>
+</html>

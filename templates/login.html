@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GROOT | Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Comfortaa:wght@700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #0a1428 0%, #1a1a3e 50%, #0f1f3f 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        /* ── Stars ── */
+        .stars {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #fff;
+            border-radius: 50%;
+            animation: twinkle 3s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50%       { opacity: 1;   }
+        }
+
+        /* ── Card ── */
+        .container {
+            position: relative;
+            z-index: 10;
+            background: linear-gradient(135deg, rgba(20,25,50,0.97) 0%, rgba(30,30,80,0.97) 100%);
+            padding: 45px 50px;
+            border-radius: 20px;
+            border: 1px solid rgba(0,191,255,0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08);
+            max-width: 460px;
+            width: 90%;
+            margin: 30px auto;
+        }
+
+        /* ── Back link ── */
+        .back-link {
+            display: inline-block;
+            color: #00bfff;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #ffdd57; }
+
+        /* ── Header ── */
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .header-icon {
+            font-size: 3em;
+            margin-bottom: 12px;
+            display: block;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0);    }
+            50%       { transform: translateY(-10px); }
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            background: linear-gradient(90deg, #00ff88 0%, #00ccff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-family: 'Comfortaa', sans-serif;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #ffdd57;
+            font-size: 0.95em;
+        }
+
+        /* ── Subheading ── */
+        .form-title {
+            font-size: 1.4em;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        /* ── Form fields ── */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 7px;
+            font-weight: 600;
+            color: #ddd;
+            font-size: 0.95em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 13px 14px;
+            border: 2px solid rgba(0,191,255,0.3);
+            border-radius: 10px;
+            background: rgba(0,191,255,0.08);
+            color: #fff;
+            font-size: 1em;
+            font-family: 'Fredoka', sans-serif;
+            transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #00bfff;
+            background: rgba(0,191,255,0.18);
+            box-shadow: 0 0 15px rgba(0,191,255,0.3);
+        }
+
+        .form-group input::placeholder { color: #666; }
+
+        /* Email input – green theme */
+        .form-group input[type="email"] {
+            border-color: rgba(0,255,136,0.3);
+            background: rgba(0,255,136,0.07);
+        }
+        .form-group input[type="email"]:focus {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.14);
+            box-shadow: 0 0 15px rgba(0,255,136,0.3);
+        }
+
+        /* Alert badge next to label */
+        .alert-badge {
+            display: inline-block;
+            background: linear-gradient(90deg, #00ff88, #00ccff);
+            color: #000;
+            font-size: 0.62em;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-left: 8px;
+            vertical-align: middle;
+            letter-spacing: 0.5px;
+        }
+
+        /* Email hint below field */
+        .email-hint {
+            font-size: 0.78em;
+            color: #00ff88;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            opacity: 0.85;
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 1.05em;
+            font-weight: 700;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+            font-family: 'Fredoka', sans-serif;
+            margin-top: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #00ff88 0%, #00ccff 100%);
+            color: #000;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,255,136,0.4);
+        }
+
+        /* ── Messages ── */
+        .error-message,
+        .success-message {
+            padding: 12px 14px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 0.95em;
+        }
+
+        .error-message {
+            background: rgba(255,82,82,0.15);
+            border: 1px solid #ff5252;
+            color: #ff5252;
+        }
+
+        .success-message {
+            background: rgba(76,175,80,0.15);
+            border: 1px solid #4caf50;
+            color: #4caf50;
+        }
+
+        /* ── Spinner ── */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 18px 0;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0,191,255,0.25);
+            border-top: 4px solid #00bfff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 0.9s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ── Toggle text ── */
+        .toggle-text {
+            text-align: center;
+            margin-top: 22px;
+            color: #aaa;
+            font-size: 0.95em;
+        }
+
+        .toggle-text a {
+            color: #ffdd57;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .toggle-text a:hover {
+            color: #00ffff;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+<div class="stars" id="stars"></div>
+
+<div class="container">
+
+    <a href="/" class="back-link">← Back to Home</a>
+
+    <!-- Header -->
+    <div class="header">
+        <span class="header-icon">🌿</span>
+        <h1>GROOT</h1>
+        <p>Your Asteroid Finder</p>
+    </div>
+
+    <!-- Feedback messages -->
+    <div class="error-message"   id="errorMessage"></div>
+    <div class="success-message" id="successMessage"></div>
+
+    <!-- ═══════════ LOGIN FORM ═══════════ -->
+    <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-title" style="color:#00ffff;">Welcome Back! 👋</div>
+
+        <div class="form-group">
+            <label for="login-username">Username</label>
+            <input type="text" id="login-username" placeholder="Enter your username" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" placeholder="Enter your password" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary">🚀 Login to GROOT</button>
+    </form>
+
+    <!-- ═══════════ SIGNUP FORM ═══════════ -->
+    <form id="signupForm" style="display:none;" onsubmit="handleSignup(event)">
+        <div class="form-title" style="color:#00ff88;">Create Account 🎉</div>
+
+        <div class="form-group">
+            <label for="signup-username">Username</label>
+            <input type="text" id="signup-username" placeholder="Choose a username" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+            <label for="signup-email">
+                Email Address
+                <span class="alert-badge">🚨 ALERTS</span>
+            </label>
+            <input type="email" id="signup-email" placeholder="Enter email for asteroid alerts" required autocomplete="email">
+            <p class="email-hint">🛸 We'll alert you when an asteroid gets close to Earth!</p>
+        </div>
+
+        <div class="form-group">
+            <label for="signup-password">Password</label>
+            <input type="password" id="signup-password" placeholder="Create a password (min. 4 chars)" required autocomplete="new-password">
+        </div>
+
+        <div class="form-group">
+            <label for="signup-confirm">Confirm Password</label>
+            <input type="password" id="signup-confirm" placeholder="Re-enter your password" required autocomplete="new-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary">✨ Create Account</button>
+    </form>
+
+    <!-- Loading spinner -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p style="color:#aaa; font-size:0.95em;">Processing…</p>
+    </div>
+
+    <!-- Toggle -->
+    <div class="toggle-text">
+        <span id="toggleText">
+            Don't have an account? <a onclick="toggleForms()">Sign Up</a>
+        </span>
+    </div>
+
+</div>
+
+<script>
+    /* ── Generate stars ── */
+    (function generateStars() {
+        const container = document.getElementById('stars');
+        for (let i = 0; i < 100; i++) {
+            const s = document.createElement('div');
+            s.className = 'star';
+            s.style.left             = Math.random() * 100 + '%';
+            s.style.top              = Math.random() * 100 + '%';
+            s.style.animationDelay   = (Math.random() * 3).toFixed(2) + 's';
+            s.style.animationDuration= (2 + Math.random() * 2).toFixed(2) + 's';
+            container.appendChild(s);
+        }
+    })();
+
+    /* ── Toggle between forms ── */
+    function toggleForms() {
+        const login  = document.getElementById('loginForm');
+        const signup = document.getElementById('signupForm');
+        const toggle = document.getElementById('toggleText');
+        const isLogin = login.style.display !== 'none';
+
+        login.style.display  = isLogin ? 'none'  : 'block';
+        signup.style.display = isLogin ? 'block' : 'none';
+        toggle.innerHTML = isLogin
+            ? 'Already have an account? <a onclick="toggleForms()">Login</a>'
+            : 'Don\'t have an account? <a onclick="toggleForms()">Sign Up</a>';
+
+        clearMessages();
+    }
+
+    /* ── Helpers ── */
+    function showLoading(show) {
+        document.getElementById('loading').style.display = show ? 'block' : 'none';
+    }
+
+    function clearMessages() {
+        document.getElementById('errorMessage').style.display   = 'none';
+        document.getElementById('successMessage').style.display = 'none';
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('errorMessage');
+        el.textContent    = '❌ ' + msg;
+        el.style.display  = 'block';
+        clearTimeout(el._timer);
+        el._timer = setTimeout(() => el.style.display = 'none', 5000);
+    }
+
+    function showSuccess(msg) {
+        const el = document.getElementById('successMessage');
+        el.textContent   = '✅ ' + msg;
+        el.style.display = 'block';
+    }
+
+    /* ── Login ── */
+    async function handleLogin(e) {
+        e.preventDefault();
+        clearMessages();
+        showLoading(true);
+
+        const username = document.getElementById('login-username').value.trim();
+        const password = document.getElementById('login-password').value;
+
+        try {
+            const res  = await fetch('/login', {
+                method : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body   : JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            showLoading(false);
+
+            if (data.success) {
+                showSuccess('Login successful! Redirecting…');
+                setTimeout(() => window.location.href = data.redirect, 1500);
+            } else {
+                showError(data.message || 'Login failed. Please check your credentials.');
+            }
+        } catch (err) {
+            showLoading(false);
+            showError('Network error. Please try again.');
+        }
+    }
+
+    /* ── Signup ── */
+    async function handleSignup(e) {
+        e.preventDefault();
+        clearMessages();
+
+        const username = document.getElementById('signup-username').value.trim();
+        const email    = document.getElementById('signup-email').value.trim();
+        const password = document.getElementById('signup-password').value;
+        const confirm  = document.getElementById('signup-confirm').value;
+
+        /* Client-side validation */
+        if (!username || username.length < 3) {
+            return showError('Username must be at least 3 characters.');
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return showError('Please enter a valid email address.');
+        }
+        if (password.length < 4) {
+            return showError('Password must be at least 4 characters.');
+        }
+        if (password !== confirm) {
+            return showError('Passwords do not match.');
+        }
+
+        showLoading(true);
+
+        try {
+            const res  = await fetch('/signup', {
+                method : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body   : JSON.stringify({ username, password, email })
+            });
+            const data = await res.json();
+            showLoading(false);
+
+            if (data.success) {
+                showSuccess(`Account created! Asteroid alerts will be sent to ${email} 🚀`);
+                setTimeout(() => window.location.href = data.redirect, 2000);
+            } else {
+                showError(data.message || 'Signup failed. Please try again.');
+            }
+        } catch (err) {
+            showLoading(false);
+            showError('Network error. Please try again.');
+        }
+    }
+</script>
+</body>
+</html>
