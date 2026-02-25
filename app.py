@@ -7,6 +7,7 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 import os
 import threading
+from apscheduler.schedulers.background import BackgroundScheduler
 from db_setup import init_db
 from asteroid_db import search_local, row_to_neo_format, seed_database, get_all_local
 from local_model import AsteroidReportGenerator
@@ -371,6 +372,21 @@ def login():
 
     if row and row[0] == password:
         session['user'] = username
+
+        # ✅ Send today's asteroid digest on every login
+        conn2 = sqlite3.connect(DB_PATH)
+        c2 = conn2.cursor()
+        c2.execute("SELECT email FROM users WHERE username=?", (username,))
+        email_row = c2.fetchone()
+        conn2.close()
+        if email_row:
+            thread = threading.Thread(
+                target=_dispatch_daily_email,
+                args=(email_row[0], username),
+                daemon=True
+            )
+            thread.start()
+
         return jsonify({"success": True, "redirect": "/dashboard"})
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
@@ -409,6 +425,14 @@ def signup():
         daemon=True
     )
     thread.start()
+
+    # ✅ Send today's asteroid digest on signup
+    thread2 = threading.Thread(
+        target=_dispatch_daily_email,
+        args=(email, username),
+        daemon=True
+    )
+    thread2.start()
 
     return jsonify({'success': True, 'redirect': '/dashboard'})
 
@@ -708,6 +732,484 @@ def neo_visual():
         return jsonify({'success': True, 'count': len(result), 'neos': result})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ── 5. Daily Email Subscription API ──────────────────────────────────────────
+
+@app.route('/api/subscribe-daily', methods=['POST'])
+def subscribe_daily():
+    if 'user' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+
+    username = session['user']
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    # Get user email
+    c.execute('SELECT email FROM users WHERE username=?', (username,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    email = row[0]
+
+    # Upsert subscription
+    c.execute('''
+        INSERT INTO email_subscriptions (username, email, subscribed)
+        VALUES (?, ?, 1)
+        ON CONFLICT(username) DO UPDATE SET subscribed=1
+    ''', (username,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'subscribed': True, 'message': f'Daily asteroid emails enabled for {email}'})
+
+
+@app.route('/api/unsubscribe-daily', methods=['POST'])
+def unsubscribe_daily():
+    if 'user' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+
+    username = session['user']
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO email_subscriptions (username, email, subscribed)
+        SELECT ?, email, 0 FROM users WHERE username=?
+        ON CONFLICT(username) DO UPDATE SET subscribed=0
+    ''', (username, username))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'subscribed': False, 'message': 'Daily emails unsubscribed'})
+
+
+@app.route('/api/subscription-status')
+def subscription_status():
+    if 'user' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+
+    username = session['user']
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('SELECT subscribed, last_sent_at FROM email_subscriptions WHERE username=?', (username,))
+    row = c.fetchone()
+    conn.close()
+
+    if row:
+        return jsonify({'success': True, 'subscribed': bool(row[0]), 'last_sent': row[1]})
+    return jsonify({'success': True, 'subscribed': False, 'last_sent': None})
+
+
+@app.route('/api/send-daily-now', methods=['POST'])
+def send_daily_now():
+    """Manual trigger — lets a logged-in user receive today's email immediately."""
+    if 'user' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+    username = session['user']
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('SELECT email FROM users WHERE username=?', (username,))
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    email = row[0]
+    thread = threading.Thread(target=_dispatch_daily_email, args=(email, username), daemon=True)
+    thread.start()
+    return jsonify({'success': True, 'message': f'Daily email dispatched to {email}'})
+
+
+# ── Daily Email Engine ────────────────────────────────────────────────────────
+
+def _dispatch_daily_email(to_email, username):
+    """Fetches today's NEOs and sends the daily digest email."""
+    today = datetime.today().strftime('%Y-%m-%d')
+    url = (f"https://api.nasa.gov/neo/rest/v1/feed"
+           f"?start_date={today}&end_date={today}&api_key={NASA_API_KEY}")
+    try:
+        r = requests.get(url, timeout=15)
+        data = r.json()
+        neos = data.get('near_earth_objects', {}).get(today, [])
+    except Exception as e:
+        print(f"❌ Daily email fetch failed: {e}")
+        return False
+
+    if not neos:
+        print("⚠ No NEO data for today — skipping daily email")
+        return False
+
+    # Sort: hazardous first, then by closest miss distance
+    def sort_key(n):
+        ca = n.get('close_approach_data', [{}])[0]
+        dist = float(ca.get('miss_distance', {}).get('kilometers', 1e12))
+        haz = 0 if n.get('is_potentially_hazardous_asteroid') else 1
+        return (haz, dist)
+
+    neos_sorted = sorted(neos, key=sort_key)
+    ok = send_daily_asteroid_email(to_email, username, today, neos_sorted)
+
+    if ok:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute('''
+            UPDATE email_subscriptions SET last_sent_at=? WHERE username=?
+        ''', (datetime.utcnow().isoformat(), username))
+        conn.commit()
+        conn.close()
+    return ok
+
+
+def run_scheduled_daily_emails():
+    """Called by APScheduler every day at 8 AM — sends to all subscribed users."""
+    print(f"📧 Running scheduled daily emails at {datetime.utcnow()}")
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''
+        SELECT s.username, s.email FROM email_subscriptions s
+        WHERE s.subscribed=1
+    ''')
+    subscribers = c.fetchall()
+    conn.close()
+
+    if not subscribers:
+        print("📭 No subscribers yet.")
+        return
+
+    for (username, email) in subscribers:
+        _dispatch_daily_email(email, username)
+        print(f"  ✅ Sent to {username} <{email}>")
+
+
+def send_daily_asteroid_email(to_email, username, date_str, neos):
+    """Build and send the gorgeous daily asteroid digest HTML email."""
+
+    total     = len(neos)
+    hazardous = [n for n in neos if n.get('is_potentially_hazardous_asteroid')]
+    safe      = total - len(hazardous)
+
+    # ── Format date nicely
+    try:
+        dt_nice = datetime.strptime(date_str, '%Y-%m-%d').strftime('%A, %B %d %Y')
+    except Exception:
+        dt_nice = date_str
+
+    # ── Subject line
+    if hazardous:
+        subject = f"🚨 GROOT Daily — {len(hazardous)} Hazardous Asteroid{'s' if len(hazardous)>1 else ''} Passing Today! ({date_str})"
+    else:
+        subject = f"🌿 GROOT Daily Digest — {total} Asteroids Passing Earth · {date_str}"
+
+    # ── Asteroid row HTML builder
+    def asteroid_row(n, index):
+        ca   = n.get('close_approach_data', [{}])[0]
+        name = n.get('name', 'Unknown').replace('(', '').replace(')', '').strip()
+        haz  = n.get('is_potentially_hazardous_asteroid', False)
+
+        try:
+            dist_km  = float(ca.get('miss_distance', {}).get('kilometers', 0))
+            dist_ld  = float(ca.get('miss_distance', {}).get('lunar', 0))
+        except Exception:
+            dist_km = dist_ld = 0
+
+        try:
+            vel_kmh  = float(ca.get('relative_velocity', {}).get('kilometers_per_hour', 0))
+        except Exception:
+            vel_kmh  = 0
+
+        try:
+            diam_min = float(n['estimated_diameter']['meters']['estimated_diameter_min'])
+            diam_max = float(n['estimated_diameter']['meters']['estimated_diameter_max'])
+        except Exception:
+            diam_min = diam_max = 0
+
+        approach_time = ca.get('close_approach_date_full', ca.get('close_approach_date', 'N/A'))
+
+        if haz:
+            badge_bg    = 'rgba(255,60,60,0.18)'
+            badge_border= 'rgba(255,60,60,0.5)'
+            badge_color = '#ff4444'
+            badge_text  = '⚠️ HAZARDOUS'
+            row_border  = '1px solid rgba(255,60,60,0.3)'
+            row_bg      = 'rgba(255,30,30,0.06)'
+            icon        = '☄️'
+        else:
+            badge_bg    = 'rgba(0,255,136,0.12)'
+            badge_border= 'rgba(0,255,136,0.3)'
+            badge_color = '#00ff88'
+            badge_text  = '✅ SAFE'
+            row_border  = '1px solid rgba(0,191,255,0.18)'
+            row_bg      = 'rgba(0,191,255,0.04)'
+            icon        = '🪨'
+
+        return f"""
+        <tr>
+          <td style="padding:0 0 12px;">
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background:{row_bg}; border:{row_border}; border-radius:14px; overflow:hidden;">
+              <tr>
+                <!-- Number badge -->
+                <td width="46" style="background:rgba(0,0,0,0.25); text-align:center;
+                             vertical-align:top; padding:18px 0; font-size:22px;">{icon}</td>
+
+                <!-- Main info -->
+                <td style="padding:16px 18px 14px;">
+
+                  <!-- Name row -->
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;">
+                    <tr>
+                      <td>
+                        <span style="color:#ffffff; font-weight:700; font-size:15px;">{name}</span>
+                        &nbsp;
+                        <span style="font-size:11px; font-weight:700; letter-spacing:1px;
+                                     background:{badge_bg}; color:{badge_color};
+                                     border:1px solid {badge_border};
+                                     padding:3px 9px; border-radius:20px;">{badge_text}</span>
+                      </td>
+                      <td align="right">
+                        <span style="color:#4a6080; font-size:11px;">#{index}</span>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Stats grid -->
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td width="25%" style="padding-bottom:6px;">
+                        <div style="color:#5a7a99; font-size:10px; letter-spacing:1px; margin-bottom:2px;">MISS DISTANCE</div>
+                        <div style="color:#00ccff; font-size:13px; font-weight:700;">{dist_km/1e6:.2f}M km</div>
+                        <div style="color:#4a6080; font-size:10px;">{dist_ld:.1f} lunar dist.</div>
+                      </td>
+                      <td width="25%" style="padding-bottom:6px;">
+                        <div style="color:#5a7a99; font-size:10px; letter-spacing:1px; margin-bottom:2px;">VELOCITY</div>
+                        <div style="color:#ffdd57; font-size:13px; font-weight:700;">{vel_kmh:,.0f} km/h</div>
+                        <div style="color:#4a6080; font-size:10px;">{vel_kmh/3600:.1f} km/s</div>
+                      </td>
+                      <td width="25%" style="padding-bottom:6px;">
+                        <div style="color:#5a7a99; font-size:10px; letter-spacing:1px; margin-bottom:2px;">DIAMETER</div>
+                        <div style="color:#cc99ff; font-size:13px; font-weight:700;">{diam_min:.0f}–{diam_max:.0f} m</div>
+                        <div style="color:#4a6080; font-size:10px;">{(diam_min+diam_max)/2:.0f} m avg</div>
+                      </td>
+                      <td width="25%" style="padding-bottom:6px;">
+                        <div style="color:#5a7a99; font-size:10px; letter-spacing:1px; margin-bottom:2px;">APPROACH</div>
+                        <div style="color:#ff9966; font-size:12px; font-weight:600;">{approach_time}</div>
+                      </td>
+                    </tr>
+                  </table>
+
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>"""
+
+    # Build all asteroid rows (max 15 to keep email size sane)
+    neos_sorted = neos[:15]
+    rows_html = ''.join(asteroid_row(n, i+1) for i, n in enumerate(neos_sorted))
+
+    # ── Threat banner
+    haz_count = len(hazardous)
+    if haz_count == 0:
+        threat_bg    = 'rgba(0,255,136,0.1)'
+        threat_border= 'rgba(0,255,136,0.3)'
+        threat_color = '#00ff88'
+        threat_icon  = '🟢'
+        threat_text  = f'ALL CLEAR — No hazardous objects detected today. {total} safe asteroids passing Earth.'
+    elif haz_count <= 2:
+        threat_bg    = 'rgba(255,221,87,0.1)'
+        threat_border= 'rgba(255,221,87,0.3)'
+        threat_color = '#ffdd57'
+        threat_icon  = '🟡'
+        threat_text  = f'LOW ALERT — {haz_count} potentially hazardous object{"s" if haz_count>1 else ""} among today\'s {total} NEOs. All on safe trajectories.'
+    else:
+        threat_bg    = 'rgba(255,60,60,0.1)'
+        threat_border= 'rgba(255,60,60,0.4)'
+        threat_color = '#ff4444'
+        threat_icon  = '🔴'
+        threat_text  = f'HIGH ACTIVITY — {haz_count} hazardous asteroids in today\'s {total} NEOs. Monitoring all trajectories.'
+
+    shown_count = len(neos_sorted)
+    more_text = f'<p style="text-align:center;color:#4a6080;font-size:12px;margin:4px 0 16px;">+ {total - shown_count} more asteroids not shown</p>' if total > shown_count else ''
+
+    # Plain text fallback
+    plain_lines = [f"GROOT Daily Asteroid Digest — {dt_nice}", "=" * 50]
+    for i, n in enumerate(neos[:10]):
+        ca = n.get('close_approach_data', [{}])[0]
+        plain_lines.append(f"{i+1}. {n.get('name','?')} | {'⚠ HAZARDOUS' if n.get('is_potentially_hazardous_asteroid') else '✅ safe'}"
+                           f" | {float(ca.get('miss_distance',{}).get('kilometers',0))/1e6:.2f}M km"
+                           f" | {float(ca.get('relative_velocity',{}).get('kilometers_per_hour',0)):,.0f} km/h")
+    plain_text = "\n".join(plain_lines) + f"\n\nView live dashboard: http://localhost:5000/dashboard\n— GROOT Team"
+
+    html_body = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GROOT Daily Digest</title>
+</head>
+<body style="margin:0;padding:0;background:#070d1f;font-family:'Segoe UI',Arial,sans-serif;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#070d1f;padding:36px 0;">
+  <tr><td align="center">
+
+    <table width="640" cellpadding="0" cellspacing="0"
+           style="background:linear-gradient(170deg,#0e1530 0%,#171740 60%,#0e1530 100%);
+                  border-radius:22px;
+                  border:1px solid rgba(0,191,255,0.25);
+                  box-shadow:0 24px 80px rgba(0,0,0,0.7);
+                  max-width:640px;width:100%;overflow:hidden;">
+
+      <!-- ══ HEADER ══ -->
+      <tr>
+        <td style="background:linear-gradient(90deg,#050c1e,#111135,#050c1e);
+                   padding:36px 40px 28px;text-align:center;
+                   border-bottom:2px solid rgba(0,191,255,0.2);">
+          <!-- Stars decoration row -->
+          <div style="font-size:11px;letter-spacing:8px;color:rgba(0,191,255,0.3);margin-bottom:12px;">★ ✦ ★ ✦ ★</div>
+          <div style="font-size:56px;margin-bottom:8px;">🌿</div>
+          <h1 style="margin:0;font-size:30px;font-weight:900;letter-spacing:6px;
+                     background:linear-gradient(90deg,#00ff88,#00ccff,#cc99ff);
+                     -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+                     background-clip:text;">GROOT</h1>
+          <p style="margin:4px 0 0;color:#ffdd57;font-size:12px;letter-spacing:3px;font-weight:600;">
+            DAILY ASTEROID DIGEST
+          </p>
+          <p style="margin:10px 0 0;color:rgba(176,196,222,0.7);font-size:13px;">{dt_nice}</p>
+        </td>
+      </tr>
+
+      <!-- ══ GREETING ══ -->
+      <tr>
+        <td style="padding:28px 40px 0;">
+          <h2 style="margin:0 0 8px;color:#00ccff;font-size:18px;">Hey {username}! 👋</h2>
+          <p style="margin:0;color:#8ab0cc;font-size:14px;line-height:1.7;">
+            Here's your daily space briefing. NASA tracked <strong style="color:#fff;">{total} near-Earth objects</strong>
+            passing by today — <strong style="color:#ff4444;">{len(hazardous)} hazardous</strong> and
+            <strong style="color:#00ff88;">{safe} safe</strong>.
+          </p>
+        </td>
+      </tr>
+
+      <!-- ══ THREAT BANNER ══ -->
+      <tr>
+        <td style="padding:20px 40px 4px;">
+          <table width="100%" cellpadding="18" cellspacing="0"
+                 style="background:{threat_bg};border:1px solid {threat_border};border-radius:14px;">
+            <tr>
+              <td style="font-size:22px;width:36px;vertical-align:middle;">{threat_icon}</td>
+              <td style="color:{threat_color};font-size:13px;font-weight:700;vertical-align:middle;">{threat_text}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- ══ QUICK STATS ══ -->
+      <tr>
+        <td style="padding:18px 40px 8px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="33%" style="text-align:center;padding:14px 8px;
+                  background:rgba(0,191,255,0.07);border:1px solid rgba(0,191,255,0.15);
+                  border-radius:12px;margin-right:8px;">
+                <div style="color:#00ccff;font-size:26px;font-weight:800;">{total}</div>
+                <div style="color:#5a7a99;font-size:11px;letter-spacing:1px;margin-top:3px;">TOTAL NEOs</div>
+              </td>
+              <td width="4px"></td>
+              <td width="33%" style="text-align:center;padding:14px 8px;
+                  background:rgba(255,60,60,0.07);border:1px solid rgba(255,60,60,0.2);
+                  border-radius:12px;">
+                <div style="color:#ff4444;font-size:26px;font-weight:800;">{len(hazardous)}</div>
+                <div style="color:#5a7a99;font-size:11px;letter-spacing:1px;margin-top:3px;">HAZARDOUS</div>
+              </td>
+              <td width="4px"></td>
+              <td width="33%" style="text-align:center;padding:14px 8px;
+                  background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.15);
+                  border-radius:12px;">
+                <div style="color:#00ff88;font-size:26px;font-weight:800;">{safe}</div>
+                <div style="color:#5a7a99;font-size:11px;letter-spacing:1px;margin-top:3px;">SAFE</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- ══ SECTION TITLE ══ -->
+      <tr>
+        <td style="padding:22px 40px 10px;">
+          <p style="margin:0;color:#4a6080;font-size:11px;font-weight:700;letter-spacing:2px;">
+            ☄️ TODAY'S ASTEROID LIST — SORTED BY HAZARD & PROXIMITY
+          </p>
+          <hr style="border:none;border-top:1px solid rgba(0,191,255,0.1);margin:8px 0 0;">
+        </td>
+      </tr>
+
+      <!-- ══ ASTEROID ROWS ══ -->
+      <tr>
+        <td style="padding:0 40px 4px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            {rows_html}
+          </table>
+          {more_text}
+        </td>
+      </tr>
+
+      <!-- ══ CTA ══ -->
+      <tr>
+        <td style="padding:8px 40px 32px;text-align:center;">
+          <a href="http://localhost:5000/dashboard"
+             style="display:inline-block;
+                    background:linear-gradient(90deg,#00ff88,#00ccff);
+                    color:#050c1e;font-weight:800;font-size:15px;
+                    padding:15px 42px;border-radius:50px;
+                    text-decoration:none;letter-spacing:1px;
+                    box-shadow:0 4px 20px rgba(0,255,136,0.3);">
+            🚀 Open Live Dashboard
+          </a>
+        </td>
+      </tr>
+
+      <!-- ══ FOOTER ══ -->
+      <tr>
+        <td style="background:rgba(0,0,0,0.35);padding:22px 40px;
+                   border-top:1px solid rgba(0,191,255,0.12);text-align:center;">
+          <p style="color:#00ff88;font-size:14px;margin:0 0 4px;font-weight:700;">🌿 GROOT — Your Asteroid Finder</p>
+          <p style="color:#3a5060;font-size:11px;margin:0 0 8px;">Real data powered by NASA NEO API · © 2026 GROOT</p>
+          <p style="color:#2a3a48;font-size:11px;margin:0;">
+            You're receiving this because you subscribed to daily digests.
+            <a href="http://localhost:5000/dashboard" style="color:#3a6080;">Manage subscription</a>
+          </p>
+        </td>
+      </tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>"""
+
+    msg = MIMEMultipart('alternative')
+    msg['From']    = EMAIL_SENDER
+    msg['To']      = to_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(plain_text, 'plain'))
+    msg.attach(MIMEText(html_body,  'html'))
+
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            smtp.sendmail(EMAIL_SENDER, to_email, msg.as_string())
+            print(f"✅ Daily digest sent to {to_email}")
+            return True
+    except Exception as e:
+        print(f"❌ Daily digest failed for {to_email}: {e}")
+        return False
+
+
+# ── APScheduler: fire daily at 08:00 UTC ─────────────────────────────────────
+_scheduler = BackgroundScheduler(timezone='UTC')
+_scheduler.add_job(run_scheduled_daily_emails, 'cron', hour=8, minute=0, id='daily_digest')
+_scheduler.start()
+print("⏰ Daily email scheduler started — fires every day at 08:00 UTC")
+
 
 if __name__ == '__main__':
     app.run(debug=True)

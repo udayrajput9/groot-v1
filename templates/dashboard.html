@@ -614,6 +614,71 @@
                     Loading AI insights...
                 </div>
             </div>
+
+            <!-- ══ Daily Email Subscription Card ══ -->
+            <div class="panel-box" style="
+                background: linear-gradient(135deg, rgba(0,255,136,0.07) 0%, rgba(0,191,255,0.07) 100%);
+                border: 1px solid rgba(0,255,136,0.25);
+                border-radius: 16px;
+                position: relative;
+                overflow: hidden;
+            ">
+                <div style="position:absolute;top:-30px;right:-30px;width:110px;height:110px;
+                            background:radial-gradient(circle,rgba(0,255,136,0.13),transparent 70%);
+                            pointer-events:none;"></div>
+
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                    <span style="font-size:22px;">📧</span>
+                    <div>
+                        <div style="color:#00ff88;font-size:13px;font-weight:700;letter-spacing:1px;">DAILY DIGEST</div>
+                        <div style="color:#4a6080;font-size:10px;letter-spacing:1px;">ASTEROID EMAIL BRIEFING</div>
+                    </div>
+                    <div id="sub-status-dot" style="margin-left:auto;width:10px;height:10px;
+                         border-radius:50%;background:#3a5060;transition:background 0.4s;
+                         box-shadow:none;"></div>
+                </div>
+
+                <p id="sub-desc" style="color:#8ab0cc;font-size:12px;line-height:1.6;margin:0 0 12px;">
+                    Get today's full asteroid list with details delivered to your inbox every morning at <strong style="color:#ffdd57;">8 AM UTC</strong>.
+                </p>
+
+                <div id="sub-last-sent" style="display:none;
+                     background:rgba(0,191,255,0.06);border:1px solid rgba(0,191,255,0.15);
+                     border-radius:8px;padding:7px 12px;margin-bottom:12px;font-size:11px;color:#5a8099;">
+                    📬 Last sent: <span id="sub-last-sent-time">—</span>
+                </div>
+
+                <div id="sub-loading" style="text-align:center;color:#4a6080;font-size:12px;padding:6px 0;">
+                    ⏳ Loading...
+                </div>
+
+                <div style="display:flex;gap:8px;flex-direction:column;">
+                    <button id="btn-subscribe" onclick="toggleSubscription(true)" style="display:none;
+                        width:100%;padding:11px;
+                        background:linear-gradient(90deg,#00ff88,#00ccff);
+                        color:#050c1e;border:none;border-radius:10px;
+                        font-weight:800;font-size:13px;cursor:pointer;letter-spacing:0.5px;
+                        transition:opacity 0.2s;">
+                        📬 Subscribe to Daily Emails
+                    </button>
+                    <button id="btn-unsubscribe" onclick="toggleSubscription(false)" style="display:none;
+                        width:100%;padding:10px;
+                        background:rgba(255,60,60,0.1);
+                        color:#ff6666;border:1px solid rgba(255,60,60,0.3);
+                        border-radius:10px;font-weight:700;font-size:12px;
+                        cursor:pointer;transition:opacity 0.2s;">
+                        🔕 Unsubscribe
+                    </button>
+                    <button id="btn-send-now" onclick="sendDailyNow()" style="display:none;
+                        width:100%;padding:9px;
+                        background:rgba(0,191,255,0.08);
+                        color:#00ccff;border:1px solid rgba(0,191,255,0.22);
+                        border-radius:10px;font-weight:600;font-size:12px;
+                        cursor:pointer;transition:opacity 0.2s;">
+                        ⚡ Send Today's Email Now
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Right Panel -->
@@ -913,6 +978,138 @@
         fetchFavorites();
         fetchAsteroids();
         setInterval(fetchAsteroids, 300000);
+    </script>
+
+    <!-- ══ Daily Email Subscription JS ══ -->
+    <script>
+        // ── Load status on page load ──────────────────────────
+        async function loadSubscriptionStatus() {
+            try {
+                const res  = await fetch('/api/subscription-status');
+                const data = await res.json();
+                renderSubUI(data.subscribed, data.last_sent);
+            } catch(e) {
+                document.getElementById('sub-loading').textContent = '⚠ Could not load status';
+            }
+        }
+
+        function renderSubUI(subscribed, lastSent) {
+            const dot      = document.getElementById('sub-status-dot');
+            const loading  = document.getElementById('sub-loading');
+            const btnSub   = document.getElementById('btn-subscribe');
+            const btnUnsub = document.getElementById('btn-unsubscribe');
+            const btnNow   = document.getElementById('btn-send-now');
+            const lastDiv  = document.getElementById('sub-last-sent');
+            const lastTime = document.getElementById('sub-last-sent-time');
+            const desc     = document.getElementById('sub-desc');
+
+            loading.style.display = 'none';
+
+            if (subscribed) {
+                dot.style.background   = '#00ff88';
+                dot.style.boxShadow    = '0 0 8px #00ff88';
+                desc.innerHTML = 'You are subscribed! Daily asteroid digest will arrive at <strong style="color:#ffdd57;">8 AM UTC</strong> every morning.';
+                btnSub.style.display   = 'none';
+                btnUnsub.style.display = 'block';
+                btnNow.style.display   = 'block';
+            } else {
+                dot.style.background = '#3a5060';
+                dot.style.boxShadow  = 'none';
+                desc.innerHTML = 'Get today\'s full asteroid list with details delivered to your inbox every morning at <strong style="color:#ffdd57;">8 AM UTC</strong>.';
+                btnSub.style.display   = 'block';
+                btnUnsub.style.display = 'none';
+                btnNow.style.display   = 'none';
+            }
+
+            if (lastSent) {
+                lastDiv.style.display = 'block';
+                const d = new Date(lastSent);
+                lastTime.textContent = isNaN(d) ? lastSent : d.toLocaleString();
+            } else {
+                lastDiv.style.display = 'none';
+            }
+        }
+
+        // ── Toggle subscription ───────────────────────────────
+        async function toggleSubscription(subscribe) {
+            const endpoint = subscribe ? '/api/subscribe-daily' : '/api/unsubscribe-daily';
+            const btnSub   = document.getElementById('btn-subscribe');
+            const btnUnsub = document.getElementById('btn-unsubscribe');
+            btnSub.disabled = btnUnsub.disabled = true;
+            btnSub.style.opacity = btnUnsub.style.opacity = '0.5';
+
+            try {
+                const res  = await fetch(endpoint, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    renderSubUI(data.subscribed, null);
+                    showSubToast(data.message, subscribe ? '#00ff88' : '#ff6666');
+                } else {
+                    showSubToast('Something went wrong. Try again.', '#ff6666');
+                }
+            } catch(e) {
+                showSubToast('Network error.', '#ff6666');
+            } finally {
+                btnSub.disabled = btnUnsub.disabled = false;
+                btnSub.style.opacity = btnUnsub.style.opacity = '1';
+            }
+        }
+
+        // ── Send now ──────────────────────────────────────────
+        async function sendDailyNow() {
+            const btn = document.getElementById('btn-send-now');
+            btn.disabled = true;
+            btn.textContent = '⏳ Sending...';
+            btn.style.opacity = '0.6';
+
+            try {
+                const res  = await fetch('/api/send-daily-now', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showSubToast('✅ Daily email sent! Check your inbox.', '#00ff88');
+                    btn.textContent = '✅ Sent!';
+                    setTimeout(() => {
+                        btn.textContent = '⚡ Send Today\'s Email Now';
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    }, 4000);
+                    // Refresh last-sent time
+                    setTimeout(loadSubscriptionStatus, 2000);
+                } else {
+                    showSubToast('Failed to send. ' + (data.message || ''), '#ff6666');
+                    btn.textContent = '⚡ Send Today\'s Email Now';
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
+            } catch(e) {
+                showSubToast('Network error.', '#ff6666');
+                btn.textContent = '⚡ Send Today\'s Email Now';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
+        }
+
+        // ── Toast notification ────────────────────────────────
+        function showSubToast(message, color) {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            Object.assign(toast.style, {
+                position: 'fixed', bottom: '30px', right: '30px',
+                background: '#111830', color: color,
+                border: `1px solid ${color}`,
+                padding: '12px 20px', borderRadius: '12px',
+                fontSize: '13px', fontWeight: '700',
+                zIndex: '9999', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                transition: 'opacity 0.4s', opacity: '1',
+                maxWidth: '320px'
+            });
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; }, 3500);
+            setTimeout(() => { toast.remove(); }, 4000);
+        }
+
+        // Load on page init
+        loadSubscriptionStatus();
     </script>
 </body>
 </html>

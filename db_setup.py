@@ -55,5 +55,17 @@ def init_db(db_path=None):
         )
     ''')
 
+    # ── Daily Email Subscriptions ──────────────────────────
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS email_subscriptions (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            username       TEXT NOT NULL UNIQUE,
+            email          TEXT NOT NULL,
+            subscribed     INTEGER DEFAULT 1,
+            subscribed_at  TEXT DEFAULT (datetime('now')),
+            last_sent_at   TEXT
+        )
+    ''')
+
     conn.commit()
     conn.close()
