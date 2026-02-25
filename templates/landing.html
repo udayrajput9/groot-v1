@@ -71,6 +71,92 @@
         <p style="font-size: 0.9em; margin-top: 20px;">Real data powered by NASA NEO API</p>
     </footer>
 
+    <!-- GROOT Chatbot -->
+    <div class="chatbot-toggle" id="chatbotToggle" onclick="toggleChatbot()" title="Chat with GROOT AI">
+        <span class="chat-icon">🌿</span>
+        <span class="chat-label">Ask GROOT</span>
+        <div class="chat-ping"></div>
+    </div>
+
+    <div class="chatbot-window" id="chatbotWindow">
+        <div class="chatbot-header">
+            <div class="chatbot-header-info">
+                <div class="chatbot-avatar">🌿</div>
+                <div>
+                    <div class="chatbot-name">GROOT AI</div>
+                    <div class="chatbot-status"><span class="status-dot"></span> Online</div>
+                </div>
+            </div>
+            <button class="chatbot-close" onclick="toggleChatbot()">✕</button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chat-msg bot-msg">
+                <div class="msg-bubble">Hey there, space explorer! 🚀 I'm GROOT — your asteroid AI assistant. Ask me anything about space, asteroids, or this app!</div>
+                <div class="msg-time">Just now</div>
+            </div>
+        </div>
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" class="chatbot-input" placeholder="Ask me about asteroids..." onkeypress="if(event.key==='Enter') sendChat()">
+            <button class="chatbot-send" onclick="sendChat()">&#10148;</button>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='landing.js') }}"></script>
+    <script>
+    // ── Chatbot Logic ─────────────────────────────────────
+    function toggleChatbot() {
+        const win = document.getElementById('chatbotWindow');
+        const ping = document.querySelector('.chat-ping');
+        win.classList.toggle('active');
+        if (ping) ping.style.display = 'none';
+    }
+
+    function appendMessage(text, role) {
+        const container = document.getElementById('chatbotMessages');
+        const div = document.createElement('div');
+        div.className = 'chat-msg ' + (role === 'user' ? 'user-msg' : 'bot-msg');
+        const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        div.innerHTML = '<div class="msg-bubble">' + text.replace(/\n/g,'<br>') + '</div><div class="msg-time">' + now + '</div>';
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function showTyping() {
+        const container = document.getElementById('chatbotMessages');
+        const div = document.createElement('div');
+        div.className = 'chat-msg bot-msg typing-indicator';
+        div.id = 'typingIndicator';
+        div.innerHTML = '<div class="msg-bubble"><span></span><span></span><span></span></div>';
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function removeTyping() {
+        const el = document.getElementById('typingIndicator');
+        if (el) el.remove();
+    }
+
+    async function sendChat() {
+        const input = document.getElementById('chatbotInput');
+        const message = input.value.trim();
+        if (!message) return;
+        input.value = '';
+        appendMessage(message, 'user');
+        showTyping();
+        try {
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: message})
+            });
+            const data = await res.json();
+            removeTyping();
+            appendMessage(data.reply, 'bot');
+        } catch(e) {
+            removeTyping();
+            appendMessage('Oops! Something went wrong 🛸 Try again!', 'bot');
+        }
+    }
+    </script>
 </body>
 </html>

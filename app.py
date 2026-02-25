@@ -11,6 +11,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from db_setup import init_db
 from asteroid_db import search_local, row_to_neo_format, seed_database, get_all_local
 from local_model import AsteroidReportGenerator
+from google import genai
+
+
 
 app = Flask(__name__)
 app.secret_key = 'groot_asteroid_tracker_secret_key_2026'
@@ -1203,6 +1206,79 @@ def send_daily_asteroid_email(to_email, username, date_str, neos):
         print(f"❌ Daily digest failed for {to_email}: {e}")
         return False
 
+
+# ── GROOT Chatbot (Gemini AI) ─────────────────────────────────────────────────
+
+import re
+from flask_cors import CORS
+
+
+# ── Gemini Client (DIRECT API KEY) ──────────────────────────
+client = genai.Client(
+    api_key="AIzaSyB_HOy4X9B65FGsA2zMilQFbHgKwRbjq7A"
+)
+
+MODEL_NAME = "gemini-3-flash-preview"
+
+# ── Local replies ───────────────────────────────────────────
+_LOCAL_RESPONSES = {
+    r'\b(hi|hello|hey|hii+|helo)\b':
+        "Hey there, space explorer! 🌿 I'm GROOT, your asteroid buddy!",
+    r'\b(thanks?|thank you|thx|ty)\b':
+        "You're welcome! 🚀 Always here to help!",
+    r'\b(bye|goodbye|see ya|cya)\b':
+        "Goodbye! 🌌 Come back soon!",
+    r'\b(who are you|introduce yourself)\b':
+        "I'm GROOT 🌿 — your AI-powered asteroid assistant!",
+    r'\b(help|what can you do)\b':
+        "I help with ☄️ asteroids, 🌍 space science & NASA data!",
+}
+
+def get_local_reply(message: str):
+    msg = message.lower().strip()
+    for pattern, reply in _LOCAL_RESPONSES.items():
+        if re.search(pattern, msg):
+            return reply
+    return None
+
+# ── Chat API ────────────────────────────────────────────────
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    data = request.get_json(silent=True) or {}
+    user_message = (data.get("message") or "").strip()
+
+    if not user_message:
+        return jsonify({"reply": "Please type something 🌿"})
+
+    # 1️⃣ Local response
+    local_reply = get_local_reply(user_message)
+    if local_reply:
+        return jsonify({"reply": local_reply, "source": "local"})
+
+    # 2️⃣ Gemini SDK call
+    system_prompt = (
+        "You are GROOT, a friendly AI assistant for an asteroid tracking web app. "
+        "You specialize in asteroids, space science, NASA data, and near-Earth objects. "
+        "Keep answers concise, fun, and space-themed. Use emojis occasionally."
+    )
+
+    try:
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=f"{system_prompt}\n\nUser: {user_message}"
+        )
+
+        return jsonify({
+            "reply": response.text,
+            "source": "gemini"
+        })
+
+    except Exception as e:
+        print("Gemini SDK error:", e)
+        return jsonify({
+            "reply": "Oops! My space antenna failed 🛸 Try again later!",
+            "source": "error"
+        })
 
 # ── APScheduler: fire daily at 08:00 UTC ─────────────────────────────────────
 _scheduler = BackgroundScheduler(timezone='UTC')
