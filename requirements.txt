@@ -11,5 +11,8 @@ Werkzeug
 gunicorn
 apscheduler
 google-genai
+<<<<<<< HEAD
 eth-account
 web3
+=======
+>>>>>>> 33f6414f3d142612102870c8294d11a28935b67e

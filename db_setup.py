@@ -67,6 +67,7 @@ def init_db(db_path=None):
         )
     ''')
 
+<<<<<<< HEAD
     # ── Blockchain Wallet Auth ─────────────────────────────
     c.execute('''
         CREATE TABLE IF NOT EXISTS wallet_nonces (
@@ -101,5 +102,7 @@ def init_db(db_path=None):
         )
     ''')
 
+=======
+>>>>>>> 33f6414f3d142612102870c8294d11a28935b67e
     conn.commit()
     conn.close()

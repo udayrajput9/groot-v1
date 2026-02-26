@@ -1212,12 +1212,15 @@ def send_daily_asteroid_email(to_email, username, date_str, neos):
 import re
 from flask_cors import CORS
 
+<<<<<<< HEAD
 # ── Blockchain / Web3 Imports ─────────────────────────────────────────────────
 import secrets
 import hashlib
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
+=======
+>>>>>>> 33f6414f3d142612102870c8294d11a28935b67e
 
 # ── Gemini Client (DIRECT API KEY) ──────────────────────────
 client = genai.Client(
@@ -1286,6 +1289,7 @@ def chat():
             "source": "error"
         })
 
+<<<<<<< HEAD
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  BLOCKCHAIN AUTH ROUTES
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1527,6 +1531,8 @@ def grant_premium():
     return jsonify({'success': True, 'is_premium': True, 'wallet': wallet})
 
 
+=======
+>>>>>>> 33f6414f3d142612102870c8294d11a28935b67e
 # ── APScheduler: fire daily at 08:00 UTC ─────────────────────────────────────
 _scheduler = BackgroundScheduler(timezone='UTC')
 _scheduler.add_job(run_scheduled_daily_emails, 'cron', hour=8, minute=0, id='daily_digest')
