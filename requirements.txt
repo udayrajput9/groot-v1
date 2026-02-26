@@ -1,0 +1,15 @@
+Flask
+Flask-Cors
+requests
+numpy
+pandas
+scikit-learn
+joblib
+SQLAlchemy
+python-dotenv
+Werkzeug
+gunicorn
+apscheduler
+google-genai
+eth-account
+web3

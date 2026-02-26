@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GROOT - Your Asteroid Finder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing.css') }}">
+    <meta name="google-site-verification" content="4g9xD3AaJYvzGcWDfzbdF_eOOjHwF0lRS3b9zozy1EU" />        
+</head>
+<body>
+    <div class="stars" id="stars"></div>
+
+    <header>
+        <div class="header-content">
+            <div class="groot-logo">🌿</div>
+            <div class="groot-title">GROOT</div>
+        </div>
+        <div class="header-buttons">
+            <button class="btn-header btn-login" onclick="window.location.href='/login'">Login</button>
+            <button class="btn-header btn-signup" onclick="window.location.href='/login'">Sign Up</button>
+        </div>
+    </header>
+
+    <!-- Center Search Modal -->
+    <div class="center-search-section" id="centerSearchModal">
+        <button class="close-search" onclick="closeCenterSearch()">✕</button>
+        <h2>🌿 GROOT Search</h2>
+        <p>Find Asteroids & Learn About Them</p>
+        <div class="center-search-input">
+            <input type="text" id="centerSearchInput" placeholder="Enter asteroid name..." onkeypress="if(event.key === 'Enter') centerQuickSearch()">
+            <button onclick="centerQuickSearch()">🔍 Search</button>
+        </div>
+        <p style="font-size: 0.85em; color: #aaa;">Try: Apophis, Bennu, or search any asteroid name</p>
+    </div>
+
+    <div class="container">
+        <div class="left-section">
+            <h1>Explore Space with <span>GROOT</span></h1>
+            <div class="tagline">I am your asteroid finder 🎯</div>
+            <p class="description">
+                Join us on an exciting journey through space! Track asteroids in real-time, discover fascinating information about near-Earth objects, and stay safe from potential hazards. GROOT makes space exploration fun and interactive for everyone!
+            </p>
+
+            <ul class="features-list">
+                <li>Real-time asteroid tracking from NASA</li>
+                <li>AI-powered asteroid insights & analysis</li>
+                <li>Interactive 3D space visualization</li>
+                <li>Hazard detection and safety alerts</li>
+                <li>Track & save your favorite asteroids</li>
+                <li>Learn fascinating space facts</li>
+            </ul>
+            <div class="cta-buttons">
+                <button class="btn-main btn-primary" onclick="window.location.href='/login'">Start Exploring</button>
+                <button class="btn-main btn-secondary" onclick="openCenterSearch()">🔍 Search Asteroids</button>
+            </div>
+        </div>
+
+        <div class="right-section">
+            <div class="space-scene">
+                <div class="planet planet-1"></div>
+                <div class="planet planet-2"></div>
+                <div class="asteroid asteroid-1"></div>
+                <div class="asteroid asteroid-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p><strong>🌍 GROOT - Your Asteroid Finder</strong></p>
+        <p>Making space exploration fun and interactive for everyone!</p>
+        <p style="font-size: 0.9em; margin-top: 20px;">Real data powered by NASA NEO API</p>
+    </footer>
+
+    <!-- GROOT Chatbot -->
+    <div class="chatbot-toggle" id="chatbotToggle" onclick="toggleChatbot()" title="Chat with GROOT AI">
+        <span class="chat-icon">🌿</span>
+        <span class="chat-label">Ask GROOT</span>
+        <div class="chat-ping"></div>
+    </div>
+
+    <div class="chatbot-window" id="chatbotWindow">
+        <div class="chatbot-header">
+            <div class="chatbot-header-info">
+                <div class="chatbot-avatar">🌿</div>
+                <div>
+                    <div class="chatbot-name">GROOT AI</div>
+                    <div class="chatbot-status"><span class="status-dot"></span> Online</div>
+                </div>
+            </div>
+            <button class="chatbot-close" onclick="toggleChatbot()">✕</button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chat-msg bot-msg">
+                <div class="msg-bubble">Hey there, space explorer! 🚀 I'm GROOT — your asteroid AI assistant. Ask me anything about space, asteroids, or this app!</div>
+                <div class="msg-time">Just now</div>
+            </div>
+        </div>
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" class="chatbot-input" placeholder="Ask me about asteroids..." onkeypress="if(event.key==='Enter') sendChat()">
+            <button class="chatbot-send" onclick="sendChat()">&#10148;</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='landing.js') }}"></script>
+    <script>
+    // ── Chatbot Logic ─────────────────────────────────────
+    function toggleChatbot() {
+        const win = document.getElementById('chatbotWindow');
+        const ping = document.querySelector('.chat-ping');
+        win.classList.toggle('active');
+        if (ping) ping.style.display = 'none';
+    }
+
+    function appendMessage(text, role) {
+        const container = document.getElementById('chatbotMessages');
+        const div = document.createElement('div');
+        div.className = 'chat-msg ' + (role === 'user' ? 'user-msg' : 'bot-msg');
+        const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        div.innerHTML = '<div class="msg-bubble">' + text.replace(/\n/g,'<br>') + '</div><div class="msg-time">' + now + '</div>';
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function showTyping() {
+        const container = document.getElementById('chatbotMessages');
+        const div = document.createElement('div');
+        div.className = 'chat-msg bot-msg typing-indicator';
+        div.id = 'typingIndicator';
+        div.innerHTML = '<div class="msg-bubble"><span></span><span></span><span></span></div>';
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function removeTyping() {
+        const el = document.getElementById('typingIndicator');
+        if (el) el.remove();
+    }
+
+    async function sendChat() {
+        const input = document.getElementById('chatbotInput');
+        const message = input.value.trim();
+        if (!message) return;
+        input.value = '';
+        appendMessage(message, 'user');
+        showTyping();
+        try {
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: message})
+            });
+            const data = await res.json();
+            removeTyping();
+            appendMessage(data.reply, 'bot');
+        } catch(e) {
+            removeTyping();
+            appendMessage('Oops! Something went wrong 🛸 Try again!', 'bot');
+        }
+    }
+    </script>
+</body>
+</html>

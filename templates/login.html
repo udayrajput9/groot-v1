@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GROOT | Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Comfortaa:wght@700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #0a1428 0%, #1a1a3e 50%, #0f1f3f 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        .stars { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: 1; pointer-events: none; }
+        .star { position: absolute; width: 2px; height: 2px; background: #fff; border-radius: 50%; animation: twinkle 3s infinite; }
+        @keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            background: linear-gradient(135deg, rgba(20,25,50,0.97) 0%, rgba(30,30,80,0.97) 100%);
+            padding: 40px 46px;
+            border-radius: 20px;
+            border: 1px solid rgba(0,191,255,0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08);
+            max-width: 480px;
+            width: 92%;
+            margin: 30px auto;
+        }
+
+        .back-link { display: inline-block; color: #00bfff; text-decoration: none; margin-bottom: 18px; font-size: 0.95em; transition: color 0.2s; }
+        .back-link:hover { color: #ffdd57; }
+
+        .header { text-align: center; margin-bottom: 28px; }
+        .header-icon { font-size: 3em; margin-bottom: 10px; display: block; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        .header h1 {
+            font-size: 2.2em;
+            background: linear-gradient(90deg, #00ff88 0%, #00ccff 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            font-family: 'Comfortaa', sans-serif; letter-spacing: 3px; margin-bottom: 6px;
+        }
+        .header p { color: #ffdd57; font-size: 0.95em; }
+
+        /* ── Divider ── */
+        .auth-divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 22px 0; color: #4a6080; font-size: 0.85em;
+        }
+        .auth-divider::before, .auth-divider::after {
+            content: ''; flex: 1; height: 1px; background: rgba(0,191,255,0.18);
+        }
+
+        /* ── Blockchain / MetaMask block ── */
+        .blockchain-section {
+            background: linear-gradient(135deg, rgba(0,255,136,0.06), rgba(0,191,255,0.06));
+            border: 1px solid rgba(0,255,136,0.25);
+            border-radius: 14px;
+            padding: 20px 22px;
+            margin-bottom: 8px;
+        }
+
+        .blockchain-section h3 {
+            font-size: 1.05em; font-weight: 700; color: #00ff88;
+            margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+        }
+
+        .blockchain-section p {
+            font-size: 0.8em; color: #7a9ab0; line-height: 1.5; margin-bottom: 14px;
+        }
+
+        .btn-metamask {
+            width: 100%; padding: 13px 16px;
+            background: linear-gradient(90deg, #f6851b, #e2761b);
+            color: #fff; font-weight: 700; font-size: 1em;
+            border: none; border-radius: 10px; cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-metamask:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(246,133,27,0.4); }
+        .btn-metamask:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .wallet-status {
+            margin-top: 12px; padding: 10px 14px;
+            background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 8px; font-size: 0.82em; color: #00ff88;
+            display: none; word-break: break-all;
+        }
+
+        /* Email field for new wallet users */
+        .wallet-email-field {
+            display: none; margin-top: 12px;
+        }
+        .wallet-email-field input {
+            width: 100%; padding: 11px 14px;
+            border: 2px solid rgba(0,255,136,0.3); border-radius: 10px;
+            background: rgba(0,255,136,0.07); color: #fff;
+            font-size: 0.95em; font-family: 'Fredoka', sans-serif;
+        }
+        .wallet-email-field input:focus { outline: none; border-color: #00ff88; }
+        .wallet-email-field input::placeholder { color: #4a6070; }
+
+        .btn-confirm-wallet {
+            display: none; width: 100%; margin-top: 10px;
+            padding: 12px; background: linear-gradient(90deg, #00ff88, #00ccff);
+            color: #000; font-weight: 700; font-size: 0.95em;
+            border: none; border-radius: 10px; cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-confirm-wallet:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,255,136,0.4); }
+
+        /* Audit log badge */
+        .audit-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: rgba(0,191,255,0.1); border: 1px solid rgba(0,191,255,0.2);
+            color: #00ccff; font-size: 0.72em; padding: 3px 9px; border-radius: 20px;
+            margin-left: 8px; vertical-align: middle;
+        }
+
+        /* ── Classic form ── */
+        .form-title { font-size: 1.35em; margin-bottom: 22px; text-align: center; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: #ddd; font-size: 0.95em; }
+        .form-group input {
+            width: 100%; padding: 12px 14px;
+            border: 2px solid rgba(0,191,255,0.3); border-radius: 10px;
+            background: rgba(0,191,255,0.08); color: #fff;
+            font-size: 1em; font-family: 'Fredoka', sans-serif;
+            transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+        }
+        .form-group input:focus { outline: none; border-color: #00bfff; background: rgba(0,191,255,0.18); box-shadow: 0 0 15px rgba(0,191,255,0.3); }
+        .form-group input::placeholder { color: #666; }
+        .form-group input[type="email"] { border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.07); }
+        .form-group input[type="email"]:focus { border-color: #00ff88; background: rgba(0,255,136,0.14); box-shadow: 0 0 15px rgba(0,255,136,0.3); }
+
+        .alert-badge {
+            display: inline-block; background: linear-gradient(90deg, #00ff88, #00ccff);
+            color: #000; font-size: 0.62em; font-weight: 700;
+            padding: 2px 8px; border-radius: 20px; margin-left: 8px; vertical-align: middle;
+        }
+        .email-hint { font-size: 0.78em; color: #00ff88; margin-top: 6px; display: flex; align-items: center; gap: 5px; opacity: 0.85; }
+
+        .btn {
+            width: 100%; padding: 14px; font-size: 1.05em; font-weight: 700;
+            border: none; border-radius: 10px; cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s; font-family: 'Fredoka', sans-serif; margin-top: 6px;
+        }
+        .btn-primary { background: linear-gradient(90deg, #00ff88 0%, #00ccff 100%); color: #000; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,255,136,0.4); }
+
+        .error-message, .success-message {
+            padding: 11px 14px; border-radius: 8px; margin-bottom: 18px; display: none; font-size: 0.93em;
+        }
+        .error-message { background: rgba(255,82,82,0.15); border: 1px solid #ff5252; color: #ff5252; }
+        .success-message { background: rgba(76,175,80,0.15); border: 1px solid #4caf50; color: #4caf50; }
+
+        .loading { display: none; text-align: center; padding: 16px 0; }
+        .spinner { border: 4px solid rgba(0,191,255,0.25); border-top: 4px solid #00bfff; border-radius: 50%; width: 38px; height: 38px; animation: spin 0.9s linear infinite; margin: 0 auto 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .toggle-text { text-align: center; margin-top: 20px; color: #aaa; font-size: 0.95em; }
+        .toggle-text a { color: #ffdd57; cursor: pointer; font-weight: 600; text-decoration: none; }
+        .toggle-text a:hover { color: #00ffff; text-decoration: underline; }
+
+        /* No MetaMask notice */
+        .no-metamask {
+            display: none; font-size: 0.8em; color: #ff9966; margin-top: 10px;
+            background: rgba(255,153,102,0.1); border: 1px solid rgba(255,153,102,0.3);
+            padding: 8px 12px; border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="stars" id="stars"></div>
+
+<div class="container">
+    <a href="/" class="back-link">← Back to Home</a>
+
+    <div class="header">
+        <span class="header-icon">🌿</span>
+        <h1>GROOT</h1>
+        <p>Your Asteroid Finder</p>
+    </div>
+
+    <div class="error-message"   id="errorMessage"></div>
+    <div class="success-message" id="successMessage"></div>
+
+    <!-- ══ BLOCKCHAIN / METAMASK LOGIN ══ -->
+    <div class="blockchain-section">
+        <h3>
+            <span>⛓️</span> Wallet Login
+            <span class="audit-badge">🔐 Blockchain Secured</span>
+        </h3>
+        <p>Sign in with your MetaMask wallet — no password needed. All logins are recorded in a tamper-proof audit log.</p>
+
+        <button class="btn-metamask" id="btnMetaMask" onclick="connectWallet()">
+            <svg width="22" height="22" viewBox="0 0 318.6 318.6" fill="none">
+                <polygon fill="#E2761B" points="274.1,35.5 174.6,109.4 193,65.8"/>
+                <polygon fill="#E4761B" points="44.4,35.5 143.1,110.1 125.6,65.8"/>
+                <polygon fill="#D7C1B3" points="238.3,206.8 211.8,247.4 268.5,263 284.8,207.7"/>
+                <polygon fill="#D7C1B3" points="33.9,207.7 50.1,263 106.8,247.4 80.3,206.8"/>
+                <polygon fill="#E4761B" points="103.6,138.2 87.8,162.1 144.1,164.6 142.1,104.1"/>
+                <polygon fill="#E4761B" points="214.9,138.2 175.9,103.4 174.6,164.6 230.8,162.1"/>
+                <polygon fill="#F6851B" points="106.8,247.4 140.6,230.9 111.4,208.1"/>
+                <polygon fill="#F6851B" points="177.9,230.9 211.8,247.4 207.1,208.1"/>
+            </svg>
+            Connect MetaMask
+        </button>
+
+        <div class="no-metamask" id="noMetaMask">
+            ⚠️ MetaMask not detected. <a href="https://metamask.io/download/" target="_blank" style="color:#ffdd57;">Install MetaMask</a> to use wallet login.
+        </div>
+
+        <div class="wallet-status" id="walletStatus"></div>
+
+        <div class="wallet-email-field" id="walletEmailField">
+            <input type="email" id="walletEmail" placeholder="Your email for asteroid alerts (optional)" autocomplete="email">
+        </div>
+
+        <button class="btn-confirm-wallet" id="btnConfirmWallet" onclick="verifyWallet()">
+            🚀 Login to GROOT
+        </button>
+    </div>
+
+    <div class="auth-divider">or login with username</div>
+
+    <!-- ══ LOGIN FORM ══ -->
+    <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-title" style="color:#00ffff;">Welcome Back! 👋</div>
+
+        <div class="form-group">
+            <label for="login-username">Username</label>
+            <input type="text" id="login-username" placeholder="Enter your username" required autocomplete="username">
+        </div>
+        <div class="form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" placeholder="Enter your password" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary">🚀 Login to GROOT</button>
+    </form>
+
+    <!-- ══ SIGNUP FORM ══ -->
+    <form id="signupForm" style="display:none;" onsubmit="handleSignup(event)">
+        <div class="form-title" style="color:#00ff88;">Create Account 🎉</div>
+
+        <div class="form-group">
+            <label for="signup-username">Username</label>
+            <input type="text" id="signup-username" placeholder="Choose a username" required autocomplete="username">
+        </div>
+        <div class="form-group">
+            <label for="signup-email">
+                Email Address
+                <span class="alert-badge">🚨 ALERTS</span>
+            </label>
+            <input type="email" id="signup-email" placeholder="Enter email for asteroid alerts" required autocomplete="email">
+            <p class="email-hint">🛸 We'll alert you when an asteroid gets close to Earth!</p>
+        </div>
+        <div class="form-group">
+            <label for="signup-password">Password</label>
+            <input type="password" id="signup-password" placeholder="Create a password (min. 4 chars)" required autocomplete="new-password">
+        </div>
+        <div class="form-group">
+            <label for="signup-confirm">Confirm Password</label>
+            <input type="password" id="signup-confirm" placeholder="Re-enter your password" required autocomplete="new-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary">✨ Create Account</button>
+    </form>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p style="color:#aaa; font-size:0.93em;">Processing…</p>
+    </div>
+
+    <div class="toggle-text">
+        <span id="toggleText">
+            Don't have an account? <a onclick="toggleForms()">Sign Up</a>
+        </span>
+    </div>
+</div>
+
+<script>
+/* ── Stars ── */
+(function(){
+    const c = document.getElementById('stars');
+    for (let i = 0; i < 100; i++) {
+        const s = document.createElement('div');
+        s.className = 'star';
+        s.style.left = Math.random()*100+'%';
+        s.style.top  = Math.random()*100+'%';
+        s.style.animationDelay    = (Math.random()*3).toFixed(2)+'s';
+        s.style.animationDuration = (2+Math.random()*2).toFixed(2)+'s';
+        c.appendChild(s);
+    }
+})();
+
+/* ── State ── */
+let _connectedWallet  = null;
+let _pendingSignature = null;
+let _nonce            = null;
+let _signMessage      = null;
+
+/* ── Helpers ── */
+function toggleForms() {
+    const login  = document.getElementById('loginForm');
+    const signup = document.getElementById('signupForm');
+    const toggle = document.getElementById('toggleText');
+    const isLogin = login.style.display !== 'none';
+    login.style.display  = isLogin ? 'none'  : 'block';
+    signup.style.display = isLogin ? 'block' : 'none';
+    toggle.innerHTML = isLogin
+        ? 'Already have an account? <a onclick="toggleForms()">Login</a>'
+        : 'Don\'t have an account? <a onclick="toggleForms()">Sign Up</a>';
+    clearMessages();
+}
+
+function showLoading(v) { document.getElementById('loading').style.display = v ? 'block' : 'none'; }
+function clearMessages() {
+    document.getElementById('errorMessage').style.display   = 'none';
+    document.getElementById('successMessage').style.display = 'none';
+}
+function showError(msg) {
+    const el = document.getElementById('errorMessage');
+    el.innerHTML = '❌ ' + msg;
+    el.style.display = 'block';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.style.display='none', 6000);
+}
+function showSuccess(msg) {
+    const el = document.getElementById('successMessage');
+    el.innerHTML = '✅ ' + msg;
+    el.style.display = 'block';
+}
+
+/* ════════════════════════════════════════════
+   BLOCKCHAIN / METAMASK FLOW
+   ════════════════════════════════════════════ */
+
+async function connectWallet() {
+    if (typeof window.ethereum === 'undefined') {
+        document.getElementById('noMetaMask').style.display = 'block';
+        return;
+    }
+
+    const btn = document.getElementById('btnMetaMask');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:3px;margin:0;display:inline-block;margin-right:10px;"></div> Connecting…';
+
+    try {
+        // Request account access
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        _connectedWallet = accounts[0].toLowerCase();
+
+        // Get nonce from server
+        const nonceRes = await fetch('/api/auth/nonce', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ wallet_address: _connectedWallet })
+        });
+        const nonceData = await nonceRes.json();
+
+        if (!nonceData.success) {
+            showError(nonceData.error || 'Failed to get nonce');
+            btn.disabled = false;
+            btn.innerHTML = '<span>🦊</span> Connect MetaMask';
+            return;
+        }
+
+        _nonce       = nonceData.nonce;
+        _signMessage = nonceData.message;
+
+        // Ask MetaMask to sign the message
+        const signature = await window.ethereum.request({
+            method: 'personal_sign',
+            params: [_signMessage, _connectedWallet]
+        });
+        _pendingSignature = signature;
+
+        // Update UI
+        const shortAddr = _connectedWallet.slice(0,6) + '…' + _connectedWallet.slice(-4);
+        document.getElementById('walletStatus').style.display = 'block';
+        document.getElementById('walletStatus').innerHTML =
+            `✅ Wallet connected: <strong>${shortAddr}</strong><br><span style="color:#7a9ab0;font-size:0.88em;">Message signed. Click below to complete login.</span>`;
+
+        document.getElementById('walletEmailField').style.display = 'block';
+        document.getElementById('btnConfirmWallet').style.display = 'block';
+
+        btn.innerHTML = '🦊 ' + shortAddr + ' Connected';
+        btn.style.background = 'linear-gradient(90deg, #00a86b, #007acc)';
+
+    } catch (err) {
+        if (err.code === 4001) {
+            showError('MetaMask: User rejected the request.');
+        } else {
+            showError('Wallet error: ' + (err.message || err));
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<span>🦊</span> Connect MetaMask';
+    }
+}
+
+async function verifyWallet() {
+    if (!_connectedWallet || !_pendingSignature) {
+        showError('Please connect your MetaMask wallet first.');
+        return;
+    }
+
+    showLoading(true);
+    document.getElementById('btnConfirmWallet').disabled = true;
+
+    const email = document.getElementById('walletEmail').value.trim();
+
+    try {
+        const res = await fetch('/api/auth/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                wallet_address: _connectedWallet,
+                signature:      _pendingSignature,
+                email:          email
+            })
+        });
+        const data = await res.json();
+        showLoading(false);
+
+        if (data.success) {
+            const isNew = data.action === 'WALLET_SIGNUP';
+            showSuccess(
+                isNew
+                    ? `🎉 Welcome to GROOT! Account created for ${data.wallet.slice(0,8)}… Redirecting…`
+                    : `Welcome back! 🚀 Logged in as ${data.username}. Redirecting…`
+            );
+            setTimeout(() => window.location.href = data.redirect, 1800);
+        } else {
+            showError(data.error || 'Verification failed. Please try again.');
+            document.getElementById('btnConfirmWallet').disabled = false;
+        }
+    } catch (err) {
+        showLoading(false);
+        showError('Network error: ' + err.message);
+        document.getElementById('btnConfirmWallet').disabled = false;
+    }
+}
+
+/* ════════════════════════════════════════════
+   CLASSIC AUTH
+   ════════════════════════════════════════════ */
+
+async function handleLogin(e) {
+    e.preventDefault(); clearMessages(); showLoading(true);
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    try {
+        const res  = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username, password}) });
+        const data = await res.json();
+        showLoading(false);
+        if (data.success) { showSuccess('Login successful! Redirecting…'); setTimeout(() => window.location.href = data.redirect, 1500); }
+        else showError(data.message || 'Login failed. Please check your credentials.');
+    } catch(err) { showLoading(false); showError('Network error. Please try again.'); }
+}
+
+async function handleSignup(e) {
+    e.preventDefault(); clearMessages();
+    const username = document.getElementById('signup-username').value.trim();
+    const email    = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const confirm  = document.getElementById('signup-confirm').value;
+    if (!username || username.length < 3) return showError('Username must be at least 3 characters.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showError('Please enter a valid email address.');
+    if (password.length < 4) return showError('Password must be at least 4 characters.');
+    if (password !== confirm) return showError('Passwords do not match.');
+    showLoading(true);
+    try {
+        const res  = await fetch('/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username, password, email}) });
+        const data = await res.json();
+        showLoading(false);
+        if (data.success) { showSuccess(`Account created! Alerts will be sent to ${email} 🚀`); setTimeout(() => window.location.href = data.redirect, 2000); }
+        else showError(data.message || 'Signup failed. Please try again.');
+    } catch(err) { showLoading(false); showError('Network error. Please try again.'); }
+}
+</script>
+</body>
+</html>
