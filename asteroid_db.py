@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.path.join(BASE_DIR, 'users.db')
-NASA_KEY = "rkvsgmB9iKdZx4Usn7rQKe5n2ifd1lPgHWbqdJLM"
+NASA_KEY = "#"
 
 # ═══════════════════════════════════════════════════════════════
 #  CURATED ASTEROID SEED DATA
