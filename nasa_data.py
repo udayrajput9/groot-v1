@@ -2,7 +2,7 @@ import sqlite3
 import requests
 from datetime import datetime
 
-NASA_API_KEY = "2UeThfszIbfRy83QPwhZRpGAPzPu4FNIiGEJzDUY"
+NASA_API_KEY = "#"
 
 def init_asteroid_db():
     conn = sqlite3.connect('asteroids.db')
