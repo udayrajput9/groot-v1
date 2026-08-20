@@ -14,7 +14,7 @@ from local_model import AsteroidReportGenerator
 app = Flask(__name__)
 app.secret_key = 'groot_asteroid_tracker_secret_key_2026'
 
-NASA_API_KEY = "rkvsgmB9iKdZx4Usn7rQKe5n2ifd1lPgHWbqdJLM"
+NASA_API_KEY = "#"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.path.join(BASE_DIR, 'users.db')
@@ -33,8 +33,8 @@ except Exception as _e:
 _report_gen = AsteroidReportGenerator()
 
 # ── Email Config (set these as environment variables in production) ────────────
-EMAIL_SENDER   = os.environ.get("EMAIL_SENDER",   "groot.spacex@gmail.com")
-EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD",  "gmllmgymnuleuhib")
+EMAIL_SENDER   = os.environ.get("EMAIL_SENDER",   "#")
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD",  "#")
 
 
 # ── Welcome Email ─────────────────────────────────────────────────────────────
